@@ -7,7 +7,7 @@
     <title>MEM-KB - 企业知识管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -19,33 +19,23 @@
             background-clip: text;
         }
         .highlight-card {
-            background: linear-gradient(135deg, rgba(255, 243, 223, 0.5) 0%, rgba(255, 255, 255, 1) 100%);
+            background: linear-gradient(135deg, rgba(255, 249, 239, 0.8) 0%, rgba(255, 255, 255, 1) 100%);
         }
-        .feature-icon-wrapper {
-            position: relative;
+        .icon-glow {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
-        .feature-icon-wrapper::before {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            background: linear-gradient(135deg, #FFE36A, #F7B51D, #F28734);
-            border-radius: 16px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: -1;
+        .icon-glow-hover {
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
         }
-        .feature-card:hover .feature-icon-wrapper::before {
-            opacity: 0.2;
-        }
-        .glow {
-            box-shadow: 0 0 30px rgba(247, 181, 29, 0.3);
+        .material-icons-round {
+            font-feature-settings: 'liga';
         }
         @keyframes float {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-8px); }
         }
-        .float-animation {
-            animation: float 3s ease-in-out infinite;
+        .float-slow {
+            animation: float 6s ease-in-out infinite;
         }
     </style>
     <script>
@@ -76,11 +66,11 @@
 </head>
 <body class="bg-gray-50 text-gray-900">
     <!-- Header -->
-    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-lg border-b border-gray-200 z-50">
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-xl border-b border-gray-200 z-50">
         <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <a href="#" class="flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-200 via-brand-300 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-300/30 group-hover:shadow-brand-300/50 transition-all duration-300">
-                    <span class="material-icons text-white text-2xl">auto_stories</span>
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-200 via-brand-300 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-300/20 group-hover:shadow-brand-300/40 transition-all duration-300">
+                    <span class="material-icons-round text-white text-2xl">auto_stories</span>
                 </div>
                 <span class="text-2xl font-black text-gray-900">MEM-KB</span>
             </a>
@@ -95,8 +85,12 @@
     </header>
 
     <!-- Hero -->
-    <section class="pt-32 pb-20 px-6 bg-gradient-to-b from-brand-50 to-white">
-        <div class="max-w-5xl mx-auto text-center">
+    <section class="pt-32 pb-24 px-6 bg-gradient-to-b from-brand-50 to-white overflow-hidden relative">
+        <div class="absolute inset-0 opacity-30">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-brand-200 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-brand-300 rounded-full blur-3xl"></div>
+        </div>
+        <div class="max-w-5xl mx-auto text-center relative z-10">
             <h1 class="text-6xl md:text-7xl font-black mb-6 leading-tight">
                 企业知识<span class="gradient-text">智能管理</span>
             </h1>
@@ -106,7 +100,7 @@
             <div class="flex flex-wrap items-center justify-center gap-4 mb-12">
                 <a href="https://github.com/2023782whl/Mem-kb" class="px-8 py-4 bg-dark-500 text-white rounded-xl font-bold text-lg hover:bg-dark-600 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
                     <span class="flex items-center gap-2">
-                        <span class="material-icons">code</span>
+                        <span class="material-icons-round">code</span>
                         GitHub
                     </span>
                 </a>
@@ -115,21 +109,21 @@
                 </a>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-4">
-                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                <span class="px-5 py-2.5 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
                     <span class="flex items-center gap-2">
-                        <span class="material-icons text-base">verified</span>
+                        <span class="material-icons-round text-base">verified</span>
                         MIT License
                     </span>
                 </span>
-                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                <span class="px-5 py-2.5 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
                     <span class="flex items-center gap-2">
-                        <span class="material-icons text-base text-green-500">security</span>
+                        <span class="material-icons-round text-base text-green-500">security</span>
                         0 漏洞
                     </span>
                 </span>
-                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                <span class="px-5 py-2.5 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
                     <span class="flex items-center gap-2">
-                        <span class="material-icons text-base text-blue-500">done_all</span>
+                        <span class="material-icons-round text-base text-blue-500">done_all</span>
                         93 测试通过
                     </span>
                 </span>
@@ -138,11 +132,11 @@
     </section>
 
     <!-- Highlights -->
-    <section class="py-20 px-6">
+    <section class="py-24 px-6">
         <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
-            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
-                <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <span class="material-icons text-white text-5xl">description</span>
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100/50 hover:border-brand-200 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300 icon-glow group-hover:icon-glow-hover">
+                    <span class="material-icons-round text-white text-3xl">article</span>
                 </div>
                 <h3 class="text-2xl font-bold mb-4 text-gray-900">多格式文档解析</h3>
                 <p class="text-gray-600 leading-relaxed">
@@ -150,9 +144,9 @@
                 </p>
             </div>
 
-            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
-                <div class="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <span class="material-icons text-white text-5xl">device_hub</span>
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100/50 hover:border-brand-200 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300 icon-glow group-hover:icon-glow-hover">
+                    <span class="material-icons-round text-white text-3xl">share</span>
                 </div>
                 <h3 class="text-2xl font-bold mb-4 text-gray-900">企业知识图谱</h3>
                 <p class="text-gray-600 leading-relaxed">
@@ -160,9 +154,9 @@
                 </p>
             </div>
 
-            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
-                <div class="w-20 h-20 bg-gradient-to-br from-brand-300 to-brand-400 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <span class="material-icons text-white text-5xl">autorenew</span>
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100/50 hover:border-brand-200 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-16 h-16 bg-gradient-to-br from-brand-300 to-brand-400 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300 icon-glow group-hover:icon-glow-hover">
+                    <span class="material-icons-round text-white text-3xl">refresh</span>
                 </div>
                 <h3 class="text-2xl font-bold mb-4 text-gray-900">知识自进化</h3>
                 <p class="text-gray-600 leading-relaxed">
@@ -173,70 +167,70 @@
     </section>
 
     <!-- Features -->
-    <section id="features" class="py-20 px-6 bg-white">
+    <section id="features" class="py-24 px-6 bg-white">
         <div class="max-w-7xl mx-auto">
             <h2 class="text-5xl font-black text-center mb-4">
                 核心<span class="gradient-text">能力</span>
             </h2>
             <p class="text-center text-gray-600 mb-16 text-lg">从检索到评测，全链路覆盖</p>
 
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-green-600 text-4xl">search</span>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-emerald-600 text-2xl">manage_search</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">混合检索</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         向量检索 + 全文检索 + Rerank 精排，提高召回率和准确率
                     </p>
                 </div>
 
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-orange-600 text-4xl">insights</span>
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-orange-600 text-2xl">analytics</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">RAG 评测</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         Recall、MRR、NDCG 等多维度评测指标
                     </p>
                 </div>
 
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-purple-600 text-4xl">account_tree</span>
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-purple-600 text-2xl">account_tree</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">知识图谱</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         自动提取实体和关系，可视化知识结构
                     </p>
                 </div>
 
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-blue-600 text-4xl">group</span>
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-blue-600 text-2xl">groups</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">多租户隔离</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         企业级权限控制，RLS 策略保护数据安全
                     </p>
                 </div>
 
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-red-600 text-4xl">speed</span>
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-red-50 to-red-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-red-600 text-2xl">trending_up</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">性能优化</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         慢查询监控、N+1 优化，50-100x 性能提升
                     </p>
                 </div>
 
-                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
-                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <span class="material-icons text-teal-600 text-4xl">hub</span>
+                <div class="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-brand-200/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                        <span class="material-icons-round text-teal-600 text-2xl">cable</span>
                     </div>
                     <h3 class="text-xl font-bold mb-3 text-gray-900">iLink 渠道</h3>
-                    <p class="text-gray-600 leading-relaxed">
+                    <p class="text-gray-600 leading-relaxed text-sm">
                         飞书、企业微信、钉钉等多渠道集成
                     </p>
                 </div>
@@ -245,7 +239,7 @@
     </section>
 
     <!-- Tech Stack -->
-    <section id="tech" class="py-20 px-6 bg-gradient-to-b from-gray-50 to-white">
+    <section id="tech" class="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
         <div class="max-w-6xl mx-auto">
             <h2 class="text-5xl font-black text-center mb-16">
                 技术<span class="gradient-text">栈</span>
@@ -253,8 +247,8 @@
 
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
-                    <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span class="material-icons text-white text-4xl">dns</span>
+                    <div class="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                        <span class="material-icons-round text-green-600 text-2xl">settings</span>
                     </div>
                     <h4 class="font-bold text-lg mb-3">Backend</h4>
                     <p class="text-gray-600 text-sm leading-relaxed">
@@ -263,8 +257,8 @@
                 </div>
 
                 <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
-                    <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span class="material-icons text-white text-4xl">storage</span>
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                        <span class="material-icons-round text-blue-600 text-2xl">storage</span>
                     </div>
                     <h4 class="font-bold text-lg mb-3">Database</h4>
                     <p class="text-gray-600 text-sm leading-relaxed">
@@ -273,8 +267,8 @@
                 </div>
 
                 <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
-                    <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span class="material-icons text-white text-4xl">web</span>
+                    <div class="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                        <span class="material-icons-round text-purple-600 text-2xl">devices</span>
                     </div>
                     <h4 class="font-bold text-lg mb-3">Frontend</h4>
                     <p class="text-gray-600 text-sm leading-relaxed">
@@ -283,8 +277,8 @@
                 </div>
 
                 <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
-                    <div class="w-16 h-16 bg-gradient-to-br from-brand-300 to-brand-400 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span class="material-icons text-white text-4xl">psychology</span>
+                    <div class="w-14 h-14 bg-gradient-to-br from-brand-200 to-brand-300 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                        <span class="material-icons-round text-brand-600 text-2xl">psychology</span>
                     </div>
                     <h4 class="font-bold text-lg mb-3">AI/ML</h4>
                     <p class="text-gray-600 text-sm leading-relaxed">
