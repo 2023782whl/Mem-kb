@@ -1,0 +1,204 @@
+version: 1
+validate_credentials: false
+models:
+  - key: llm_doubao_seed_1_8
+    name: doubao-seed-1-8
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: doubao-seed-1-8-251228
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_doubao_seed_2_0_lite
+    name: doubao-seed-2-0-lite
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: doubao-seed-2-0-lite-260215
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_doubao_seed_2_0_pro_260215
+    name: doubao-seed-2-0-pro-260215
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: doubao-seed-2-0-pro-260215
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_gemini_3_flash_preview
+    name: gemini-3-flash-preview
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: google/gemini-3-flash-preview
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_gpt_5_5
+    name: gpt-5.5
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: gpt-5.5
+    workspace_id: default
+    supports_vision: true
+    capabilities:
+      - fast_chat
+      - analysis
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+    model_params_form:
+      - field: max_completion_tokens
+        label: Max completion tokens
+        required: true
+        input_type: Slider
+        trigger_type: OPTION_LIST
+        default_value: 8192
+        attrs:
+          min: 1
+          max: 100000
+          step: 1
+          precision: 0
+          show-input: true
+          show-input-controls: false
+        props_info: {}
+        relation_show_field_dict: {}
+        relation_trigger_field_dict: {}
+  - key: llm_claude_opus_4_7
+    name: claude-opus-4.7
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: claude-opus-4.7
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_claude_sonnet_4_6
+    name: claude-sonnet-4.6
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: claude-sonnet-4.6
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_qwen3_7_max
+    name: qwen3.7-max
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: qwen3.7-max
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: llm_glm_5_2
+    name: glm-5.2
+    provider: model_openai_provider
+    model_type: LLM
+    model_name: glm-5.2
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_doubao_seed_2_0_lite
+    name: doubao-seed-2-0-lite-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: doubao-seed-2-0-lite-260215
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_doubao_seed_2_0_pro_260215
+    name: doubao-seed-2-0-pro-260215-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: doubao-seed-2-0-pro-260215
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_gemini_3_flash_preview
+    name: gemini-3-flash-preview-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: google/gemini-3-flash-preview
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_claude_opus_4_7
+    name: claude-opus-4.7-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: claude-opus-4.7
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_claude_sonnet_4_6
+    name: claude-sonnet-4.6-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: claude-sonnet-4.6
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: vision_qwen3_7_max
+    name: qwen3.7-max-vision
+    provider: model_openai_provider
+    model_type: IMAGE
+    model_name: qwen3.7-max
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}
+  - key: embedding_qwen_text_embedding_v3
+    name: qwen-text-embedding-v3
+    provider: model_openai_provider
+    model_type: EMBEDDING
+    model_name: text-embedding-v3
+    workspace_id: default
+    credential:
+      api_base: ${EMBEDDING_BASE_URL}
+      api_key: ${EMBEDDING_API_KEY}
+  - key: embedding_qwen_text_embedding_v4
+    name: qwen-text-embedding-v4
+    provider: aliyun_bai_lian_model_provider
+    model_type: EMBEDDING
+    model_name: text-embedding-v4
+    workspace_id: default
+    credential:
+      api_base: ${EMBEDDING_BASE_URL}
+      dashscope_api_key: ${EMBEDDING_API_KEY}
+  - key: reranker_aliyun_qwen3_rerank
+    name: qwen3-rerank
+    provider: aliyun_bai_lian_model_provider
+    model_type: RERANKER
+    model_name: qwen3-rerank
+    workspace_id: default
+    credential:
+      api_base: ${DASHSCOPE_RERANK_BASE_URL}
+      dashscope_api_key: ${EMBEDDING_API_KEY}
+  - key: embedding_aliyun_multimodal_v1
+    name: multimodal-embedding-v1
+    provider: aliyun_bai_lian_model_provider
+    model_type: EMBEDDING
+    model_name: multimodal-embedding-v1
+    workspace_id: default
+    credential:
+      api_base: ${DASHSCOPE_API_BASE_URL}
+      dashscope_api_key: ${EMBEDDING_API_KEY}
+  - key: tti_doubao_seedream
+    name: doubao-seedream
+    provider: model_openai_provider
+    model_type: TTI
+    model_name: doubao-seedream-5-0-260128
+    workspace_id: default
+    credential:
+      api_base: ${MODEL_BASE_URL}
+      api_key: ${OPENAI_API_KEY}

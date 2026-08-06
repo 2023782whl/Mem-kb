@@ -1,0 +1,7 @@
+node_modules
+.git
+.gbrain
+.runtime
+coverage
+test-results
+*.log

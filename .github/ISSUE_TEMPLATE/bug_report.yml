@@ -1,0 +1,54 @@
+name: Bug report
+description: 报告可复现的问题
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: 感谢反馈。请移除令牌、用户数据、内部地址和其他敏感信息。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 说明实际行为、预期行为和影响。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开…
+        2. 点击…
+        3. 看到…
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本或 commit
+      placeholder: v0.1.0 / abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 操作系统、Node/Bun、浏览器、部署方式等。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 可选；请先脱敏。
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交检查
+      options:
+        - label: 我已搜索现有 Issue，未发现重复问题。
+          required: true
+        - label: 我确认内容中不包含密钥或真实用户数据。
+          required: true

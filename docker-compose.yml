@@ -1,0 +1,126 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aiteam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: aiteam_app
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiteam -d aiteam_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gbrain:
+    build:
+      context: ./backend/gbrain
+    restart: unless-stopped
+    environment:
+      GBRAIN_DATABASE_URL: postgresql://aiteam:${POSTGRES_PASSWORD}@postgres:5432/gbrain
+      GBRAIN_ADMIN_BOOTSTRAP_TOKEN: ${GBRAIN_TOKEN:?set GBRAIN_TOKEN}
+      OPENAI_BASE_URL: ${MODEL_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DASHSCOPE_API_KEY: ${EMBEDDING_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:3131/health');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend/app
+    restart: unless-stopped
+    environment: &api-env
+      AITEAM_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8788
+      FRONTEND_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      PUBLIC_BASE_URL: ${APP_ORIGIN}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      DATABASE_URL: postgresql://aiteam:${POSTGRES_PASSWORD}@postgres:5432/aiteam_app
+      DATABASE_NAME: aiteam_app
+      DATABASE_HOST: postgres
+      DATABASE_USER: aiteam
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      GBRAIN_BASE_URL: http://gbrain:3131
+      GBRAIN_MCP_URL: http://gbrain:3131/mcp
+      GBRAIN_TOKEN: ${GBRAIN_TOKEN}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_ROOT: /app/storage
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      OSS_PREFIX: ${OSS_PREFIX:-aiteam}
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      DASHSCOPE_API_BASE_URL: ${DASHSCOPE_API_BASE_URL:-https://dashscope.aliyuncs.com/api/v1}
+      DASHSCOPE_RERANK_BASE_URL: ${DASHSCOPE_RERANK_BASE_URL:-https://dashscope.aliyuncs.com/compatible-api/v1}
+      LOG_DIR: /app/logs
+    volumes:
+      - app-storage:/app/storage
+      - app-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gbrain:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    build:
+      context: ./backend/app
+    restart: unless-stopped
+    command: ["node", "dist/src/worker.js"]
+    environment: *api-env
+    volumes:
+      - app-storage:/app/storage
+      - app-logs:/app/logs
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  redis-data:
+  app-storage:
+  app-logs:

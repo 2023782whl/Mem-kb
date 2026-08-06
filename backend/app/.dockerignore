@@ -1,0 +1,7 @@
+node_modules
+dist
+config/.env.local
+.env*
+logs
+.runtime
+coverage

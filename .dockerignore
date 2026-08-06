@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/.env*
+**/logs
+**/.runtime
+backend/storage
+.git
+.DS_Store

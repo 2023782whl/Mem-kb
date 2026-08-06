@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aiteam_app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d aiteam_app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      AITEAM_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/aiteam_app
+      DATABASE_NAME: aiteam_app
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      AUTH_SECRET: ci-only-auth-secret-at-least-32-characters
+      AITEAM_MODEL_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/app/package-lock.json
+            frontend/package-lock.json
+      - name: Install backend
+        run: npm ci
+        working-directory: backend/app
+      - name: Install frontend
+        run: npm ci
+        working-directory: frontend
+      - name: Migrate test database
+        run: npm run db:setup
+        working-directory: backend/app
+      - name: Verify database policies
+        run: test "$(psql "$DATABASE_URL" -Atc 'select count(*) from pg_policies')" -ge 28
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production builds
+        run: npm run build
+      - name: Dependency audit
+        run: npm run audit
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Browser layout test
+        run: npm run test:e2e
+        working-directory: frontend
+
+  gbrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install GBrain
+        run: bun install --frozen-lockfile
+        working-directory: backend/gbrain
+      - name: Typecheck GBrain
+        run: bun run typecheck
+        working-directory: backend/gbrain
+      - name: Privacy and configuration checks
+        run: bun run check:source-config-leak && bun run check:privacy
+        working-directory: backend/gbrain

@@ -1,0 +1,30 @@
+{
+  "name": "mem-kb",
+  "version": "0.1.0",
+  "description": "A self-hosted knowledge workspace for sourced RAG, notes, graphs, evaluation, and continuous knowledge consolidation.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "install:all": "npm --prefix backend/app install && npm --prefix frontend install && bun install --cwd backend/gbrain",
+    "infra:up": "docker compose -f compose.dev.yml up -d",
+    "infra:down": "docker compose -f compose.dev.yml down",
+    "db:setup": "npm --prefix backend/app run db:setup",
+    "dev": "node scripts/dev.mjs",
+    "dev:gbrain": "bash scripts/start-gbrain.sh",
+    "dev:api": "npm --prefix backend/app run dev",
+    "dev:worker": "npm --prefix backend/app run dev:worker",
+    "dev:web": "npm --prefix frontend run dev",
+    "typecheck": "npm --prefix backend/app run typecheck && npm --prefix frontend run typecheck",
+    "build": "npm --prefix backend/app run build && npm --prefix frontend run build",
+    "test": "npm --prefix backend/app run test && npm --prefix frontend run test",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "test:regression": "npm --prefix backend/app run test:regression",
+    "audit": "npm --prefix backend/app audit --audit-level=high && npm --prefix frontend audit --audit-level=high",
+    "check": "npm run typecheck && npm test && npm run build"
+  }
+}
