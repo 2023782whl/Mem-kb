@@ -3,6 +3,15 @@ import { AlertCircle, Check, Cloud, RotateCcw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Brand } from "./Brand";
 
+type RouteSkeletonVariant = "qa" | "knowledge" | "notes" | "settings";
+
+const routeSkeletonMeta: Record<RouteSkeletonVariant, { title: string; detail: string; panel: string; rows: number }> = {
+  qa: { title: "知识问答", detail: "正在准备会话、模型与知识范围", panel: "会话", rows: 4 },
+  knowledge: { title: "知识中心", detail: "正在加载知识资产与预览区", panel: "知识空间", rows: 5 },
+  notes: { title: "笔记", detail: "正在加载 Workspace 与笔记内容", panel: "笔记空间", rows: 6 },
+  settings: { title: "系统设置", detail: "正在加载账号与系统状态", panel: "企业管理", rows: 7 }
+};
+
 export function useDelayedPending(pending: boolean, delay = 200) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -14,6 +23,81 @@ export function useDelayedPending(pending: boolean, delay = 200) {
     return () => window.clearTimeout(timer);
   }, [delay, pending]);
   return visible;
+}
+
+export function RouteSkeleton({ variant = "qa", title, detail, timeout = 12_000, onRetry }: {
+  variant?: RouteSkeletonVariant;
+  title?: string;
+  detail?: string;
+  timeout?: number;
+  onRetry?: () => void;
+}) {
+  const meta = routeSkeletonMeta[variant];
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    setTimedOut(false);
+    const timer = window.setTimeout(() => setTimedOut(true), timeout);
+    return () => window.clearTimeout(timer);
+  }, [timeout, title, variant]);
+
+  const resolvedTitle = timedOut ? "连接时间较长" : title || meta.title;
+  const resolvedDetail = timedOut ? "请检查服务状态后重试，当前页面不会无限等待。" : detail || meta.detail;
+
+  return (
+    <div className={`route-skeleton app-shell route-skeleton-${variant}`} role="status" aria-live="polite" aria-busy="true">
+      <aside className="route-skeleton-rail">
+        <Brand compact />
+        <div className="route-skeleton-nav">
+          {[0, 1, 2].map((item) => <span key={item}><i className="skeleton-shape" /><b className="skeleton-line short" /></span>)}
+        </div>
+        <div className="route-skeleton-bottom">
+          <i className="skeleton-shape" />
+          <i className="skeleton-shape" />
+        </div>
+      </aside>
+      <section className="route-skeleton-stage">
+        <header className="route-skeleton-topbar">
+          <div>
+            <strong>{resolvedTitle}</strong>
+            <span>{resolvedDetail}</span>
+          </div>
+          <div>
+            <i className="skeleton-pill wide" />
+            <i className="skeleton-pill" />
+            <i className="skeleton-avatar" />
+          </div>
+        </header>
+        <main className="route-skeleton-main">
+          <section className="route-skeleton-panel">
+            <span>{meta.panel}</span>
+            <b className="skeleton-line title" />
+            <i className="skeleton-pill full" />
+            {Array.from({ length: meta.rows }, (_, index) => <b key={index} className={`skeleton-line ${index % 3 === 1 ? "medium" : ""}`} />)}
+          </section>
+          <section className="route-skeleton-content">
+            <i className="skeleton-logo" />
+            <b className="skeleton-line hero" />
+            <b className="skeleton-line medium" />
+            <div className="route-skeleton-card">
+              <b className="skeleton-line full" />
+              <b className="skeleton-line full" />
+              <b className="skeleton-line medium" />
+              <div>
+                <i className="skeleton-pill" />
+                <i className="skeleton-pill" />
+                <i className="skeleton-pill" />
+              </div>
+              {timedOut && onRetry ? (
+                <button className="button secondary compact route-skeleton-retry" onClick={onRetry}>
+                  <RotateCcw size={14} />重新尝试
+                </button>
+              ) : null}
+            </div>
+          </section>
+        </main>
+      </section>
+    </div>
+  );
 }
 
 export function BrandLoader({ label, detail, timeout = 12_000, onRetry }: {

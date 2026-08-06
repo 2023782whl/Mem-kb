@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, BookOpen, ChevronDown, History, MessageSquareText, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowUpRight, BookOpen, ChevronDown, History, MessageSquareText, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { api } from "../../api/client";
 import { useWorkspaces } from "../../shared/useWorkspaces";
 import type { Asset, Conversation, ConversationMessage, InsightItem, ModelInfo } from "../../types/domain";
@@ -10,9 +10,11 @@ import { MessageThread } from "./MessageThread";
 import { FileTypeIcon } from "../knowledge/FileTypeIcon";
 import productLogo from "../../assets/icons/product_logo.png";
 import productLogoVideo from "../../assets/icons/product_logo.mp4";
-import { usePersistentBoolean } from "../../shared/usePersistentState";
+import { useDockedPanel } from "../../shared/useDockedPanel";
+import { TopbarPanelTrigger } from "../../shared/TopbarPanelTrigger";
+import { formatAssistantError } from "../../shared/AssistantExperience";
 
-const QA_HISTORY_OPEN_KEY = "mem-kb:qa-history-open";
+const QA_HISTORY_PINNED_KEY = "mem-kb:qa-history-pinned-v2";
 
 export function KnowledgeQaPage() {
   const { workspaces, active, activeId, setActiveId, loading: workspaceLoading } = useWorkspaces();
@@ -24,7 +26,7 @@ export function KnowledgeQaPage() {
   const [conversationTitle, setConversationTitle] = useState("新会话");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyRailOpen, setHistoryRailOpen] = usePersistentBoolean(QA_HISTORY_OPEN_KEY, true);
+  const historyPanel = useDockedPanel(QA_HISTORY_PINNED_KEY);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState("");
@@ -121,7 +123,7 @@ export function KnowledgeQaPage() {
       if (controller.signal.aborted) {
         replaceMessage(assistantId, (message) => ({ ...message, status: "stopped" }));
       } else {
-        const message = reason instanceof Error ? reason.message : "问答失败";
+        const message = formatAssistantError(reason, "问答失败");
         replaceMessage(assistantId, (current) => ({ ...current, status: "error", error: message }));
         setPageError(message);
       }
@@ -152,7 +154,7 @@ export function KnowledgeQaPage() {
       setConversationId(result.conversation.id);
       setConversationTitle(result.conversation.title);
       setActiveId(result.conversation.workspace_id);
-      setWorkspaceIds([result.conversation.workspace_id]);
+      setWorkspaceIds(result.conversation.workspace_ids?.length ? result.conversation.workspace_ids : [result.conversation.workspace_id]);
       setModelId(result.conversation.model_id);
       setMessages(result.messages.map((message) => ({ ...message, status: "complete" })));
       setHistoryOpen(false);
@@ -188,6 +190,15 @@ export function KnowledgeQaPage() {
       composerRef.current?.focus();
       composerRef.current?.setSelectionRange(value.length, value.length);
     });
+  }
+
+  function openHistoryPanel() {
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      setHistoryOpen(true);
+      void refreshConversations();
+      return;
+    }
+    historyPanel.openPanel();
   }
 
   function branchFrom(index: number) {
@@ -273,18 +284,10 @@ export function KnowledgeQaPage() {
   );
 
   return (
-    <div className={`qa-module-layout ${historyRailOpen ? "" : "history-collapsed"}`}>
-      <ConversationHistory embedded open={historyRailOpen} loading={historyLoading} conversations={conversations} workspaces={workspaces} activeId={conversationId} onClose={() => undefined} onNew={newConversation} onSelect={(conversation) => void loadConversation(conversation)} onDelete={(conversation) => void deleteConversation(conversation)} />
-      <button
-        type="button"
-        className="pane-collapse-toggle qa-history-toggle"
-        onClick={() => setHistoryRailOpen((current) => !current)}
-        aria-label={historyRailOpen ? "收起问答历史" : "展开问答历史"}
-        title={historyRailOpen ? "收起问答历史" : "展开问答历史"}
-      >
-        {historyRailOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-      </button>
-      <main className={`qa-chat-page ${hasConversation ? "conversation-mode" : "welcome-mode"}`}>
+    <div className={`qa-module-layout ${historyPanel.open ? "" : "history-collapsed"}`}>
+      <ConversationHistory embedded open={historyPanel.open} pinned={historyPanel.pinned} loading={historyLoading} conversations={conversations} workspaces={workspaces} activeId={conversationId} onClose={() => undefined} onTogglePinned={historyPanel.togglePinned} onNew={newConversation} onSelect={(conversation) => void loadConversation(conversation)} onDelete={(conversation) => void deleteConversation(conversation)} />
+      <TopbarPanelTrigger label={historyPanel.open ? "收起问答历史" : "展开问答历史"} expanded={historyPanel.open} onToggle={historyPanel.open ? historyPanel.closePanel : openHistoryPanel} />
+      <main className={`qa-chat-page ${hasConversation ? "conversation-mode" : "welcome-mode"}`} onPointerDown={historyPanel.closeTemporaryPanel}>
       <header className="qa-chat-toolbar">
         <div><strong>{conversationTitle}</strong>{hasConversation ? <span>{active?.name || "知识库"}</span> : null}</div>
         <nav className="qa-mobile-actions"><button onClick={() => { setHistoryOpen(true); void refreshConversations(); }}><History size={17} />历史</button><button onClick={newConversation}><Plus size={17} />新建会话</button></nav>
@@ -379,7 +382,7 @@ function SeamlessBrandVideo() {
       animationFrame = window.requestAnimationFrame(tick);
     };
 
-    void videos[0].play();
+    void videos[0].play().catch(() => undefined);
     animationFrame = window.requestAnimationFrame(tick);
     return () => {
       window.cancelAnimationFrame(animationFrame);

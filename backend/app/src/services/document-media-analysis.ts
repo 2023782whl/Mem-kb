@@ -62,7 +62,7 @@ async function describeWithRetry(item: MaterializedMedia) {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await describeImage(item.absolutePath, item.mime_type);
+      return await describeImage(item.absolutePath, item.mime_type, item.tenant_id);
     } catch (error) {
       lastError = error;
     }

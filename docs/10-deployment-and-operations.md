@@ -27,7 +27,9 @@ docker compose --env-file .env.production exec \
 
 ## 健康与监控
 
-- 用户侧健康：`GET /api/health`，包含数据库、Redis、队列和 GBrain 状态。
+- 存活探针：`GET /api/live`，只判断 API 进程是否存活。
+- 就绪探针：`GET /api/ready`，判断 API 与主数据库是否可接流量；容器重启不再依赖外部模型服务。
+- 深度健康：`GET /api/health`，包含数据库、Redis、两类队列和 GBrain 状态。
 - Prometheus 指标：`GET /metrics`，包含 HTTP 请求耗时/状态和队列 waiting/active/failed 数量。
 - 生产日志输出到标准输出，同时按天或 100 MB 轮转到 `app-logs` 卷，保留 14 个文件。
 - 建议至少对 API 不健康、GBrain 不健康、队列 failed 增长、P95 延迟和磁盘/数据库容量设置告警。

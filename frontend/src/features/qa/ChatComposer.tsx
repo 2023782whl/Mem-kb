@@ -1,6 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { BookMarked, Bot, ChevronDown, Globe2, Image, Paperclip, Send, Square, X } from "lucide-react";
+import { BookMarked, ChevronDown, Globe2, Image, Paperclip, Send, Square, X } from "lucide-react";
 import { LoadingDots } from "../../shared/LoadingSystem";
+import { ModelPicker } from "../../shared/ModelPicker";
 import type { ModelInfo, Workspace } from "../../types/domain";
 import { FileTypeIcon } from "../knowledge/FileTypeIcon";
 
@@ -91,7 +92,7 @@ export function ChatComposer(props: ChatComposerProps) {
       />
       <div className="chat-composer-toolbar">
         <div className="chat-composer-options">
-          <label className="select-control tone-model"><Bot size={16} /><select aria-label="选择模型" value={modelId} onChange={(event) => onModelChange(event.target.value)}>{models.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
+          <ModelPicker className="composer-model-picker" models={models} value={modelId} onChange={onModelChange} />
           <details ref={workspacePickerRef} className="workspace-scope-picker tone-knowledge">
             <summary aria-label="选择知识库范围"><BookMarked size={16} /><span>{workspaceScopeLabel}</span><ChevronDown className="scope-chevron" size={14} /></summary>
             <div>

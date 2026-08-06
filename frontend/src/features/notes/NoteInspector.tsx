@@ -1,5 +1,5 @@
 import {
-  ArrowDownToLine, Bot, Check, ChevronDown, Clock3, Copy, ExternalLink, History,
+  ArrowDownToLine, Check, ChevronDown, Clock3, Copy, ExternalLink, FileText, History,
   Lightbulb, Maximize2, Minimize2, Paperclip, Plus, RotateCcw, Send, Sparkles, Square,
   Tag, Trash2, WandSparkles, X
 } from "lucide-react";
@@ -8,12 +8,15 @@ import { api } from "../../api/client";
 import { ConfirmActionDialog, TextEntryDialog } from "../../shared/EntityDialogs";
 import { LoadingDots } from "../../shared/LoadingSystem";
 import { MarkdownContent } from "../../shared/MarkdownContent";
+import { AssistantGenerationStatus, formatAssistantError } from "../../shared/AssistantExperience";
+import { ModelPicker } from "../../shared/ModelPicker";
 import type { Asset, ModelInfo, Note, NoteAssistantSource, NoteFact, NoteLifecycle } from "../../types/domain";
+import { useI18n } from "../../i18n";
 
 type InspectorTab = "ai" | "gbrain" | "facts";
 type ApplyMode = "insert" | "replace" | "append";
 type AssistantAction = "continue" | "rewrite" | "summarize" | "outline" | "custom";
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string; sources?: NoteAssistantSource[] };
+type ChatMessage = { id: string; role: "user" | "assistant"; content: string; startedAt?: number; sources?: NoteAssistantSource[] };
 
 const actionLabels: Record<AssistantAction, string> = {
   continue: "续写",
@@ -22,6 +25,11 @@ const actionLabels: Record<AssistantAction, string> = {
   outline: "生成大纲",
   custom: "自由创作"
 };
+
+const starterQuestions = {
+  "zh-CN": ["这份笔记解决了什么问题？", "有哪些关键点容易被忽略？", "提炼这份笔记最重要的 5 个结论"],
+  "en-US": ["What problem does this note solve?", "Which key points are easy to overlook?", "Summarize the five most important conclusions in this note"]
+} as const;
 
 function assistantRole(model: ModelInfo) {
   const value = `${model.id} ${model.name}`.toLowerCase();
@@ -33,7 +41,7 @@ function assistantRole(model: ModelInfo) {
 
 export function NoteInspector({
   note, assets, selection, cursorContext, onApply, onTagsChange, onAutoPublishChange,
-  onReverted, onOpenSource, onClose, expanded = false, onToggleExpanded
+  onReverted, onOpenSource, onClose, expanded = false, onToggleExpanded, pendingPrompt, onPromptHandled
 }: {
   note: Note | null;
   assets: Asset[];
@@ -47,7 +55,10 @@ export function NoteInspector({
   onClose?: () => void;
   expanded?: boolean;
   onToggleExpanded?: () => void;
+  pendingPrompt?: { id: number; noteId: string; text: string } | null;
+  onPromptHandled?: (id: number) => void;
 }) {
+  const { locale } = useI18n();
   const [tab, setTab] = useState<InspectorTab>("ai");
   const [action, setAction] = useState<AssistantAction>("continue");
   const [instruction, setInstruction] = useState("");
@@ -70,6 +81,7 @@ export function NoteInspector({
   const [forgetTarget, setForgetTarget] = useState<NoteFact | null>(null);
   const [dialogBusy, setDialogBusy] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
+  const handledPromptRef = useRef<number | null>(null);
 
   const availableAssets = useMemo(() => assets.filter((asset) => asset.status === "ready" && asset.type !== "image"), [assets]);
   const output = [...messages].reverse().find((message) => message.role === "assistant")?.content || "";
@@ -122,7 +134,7 @@ export function NoteInspector({
     controllerRef.current = controller;
     setMessages((current) => [...current,
       { id: `${requestId}-user`, role: "user", content: prompt },
-      { id: assistantId, role: "assistant", content: "", sources: [] }
+      { id: assistantId, role: "assistant", content: "", startedAt: Date.now(), sources: [] }
     ]);
     setInstruction("");
     setLoading(true);
@@ -135,6 +147,7 @@ export function NoteInspector({
         cursorContext: cursorContext || undefined,
         assetIds: selectedAssetIds,
         modelId: modelId || undefined,
+        locale,
         options: { knowledgeSearch, webSearch }
       }, {
         source: (source) => updateAssistant(assistantId, (message) => ({
@@ -147,11 +160,19 @@ export function NoteInspector({
         done: (answer) => updateAssistant(assistantId, (message) => ({ ...message, content: message.content || answer }))
       }, controller.signal);
     } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "AI 写作失败");
+      if (!controller.signal.aborted) setError(formatAssistantError(reason, "AI 写作失败"));
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!note || !pendingPrompt || pendingPrompt.noteId !== note.id || loading || handledPromptRef.current === pendingPrompt.id) return;
+    handledPromptRef.current = pendingPrompt.id;
+    setTab("ai");
+    void runAssistant({ action: "custom", instruction: pendingPrompt.text });
+    onPromptHandled?.(pendingPrompt.id);
+  }, [loading, note?.id, pendingPrompt?.id]);
 
   async function extractFacts() {
     if (!note) return;
@@ -206,7 +227,7 @@ export function NoteInspector({
     <>
       <aside className={`note-inspector copilot-assistant ${expanded ? "expanded" : ""}`}>
         <header className="copilot-header">
-          <span className="copilot-title"><Bot size={17} /><strong>Mem-kb 助手</strong></span>
+          <span className="copilot-title"><Sparkles size={17} /><strong>AI 问答</strong></span>
           <span className="copilot-controls">
             <button onClick={() => { setMessages([]); setInstruction(""); }} title="新对话"><Plus size={16} /></button>
             <button className={historyOpen ? "active" : ""} onClick={() => setHistoryOpen((value) => !value)} title="对话历史"><History size={16} /></button>
@@ -224,13 +245,22 @@ export function NoteInspector({
         {tab === "ai" ? (
           <div className="copilot-chat">
             <div className="copilot-thread" aria-live="polite">
-              {!messages.length ? <div className="copilot-empty"><span><Sparkles size={22} /></span><strong>和当前笔记一起思考</strong><p>可续写、重写、生成大纲，并引用当前 Workspace 的知识。</p></div> : null}
+              {!messages.length ? <div className="copilot-empty">
+                <span className="copilot-wave" aria-hidden="true">👋</span>
+                <strong>Hi，我可以帮你做什么</strong>
+                <p>我会基于当前笔记回答、提炼和继续创作。</p>
+                <div className="copilot-starter-questions">
+                  {starterQuestions[locale].map((question) => <button type="button" key={question} onClick={() => void runAssistant({ action: "custom", instruction: question })}>{question}</button>)}
+                </div>
+              </div> : null}
               {messages.map((message) => message.role === "user" ? (
-                <article key={message.id} className="copilot-message user"><p>{message.content}</p></article>
+                <article key={message.id} className="copilot-message user"><p data-i18n-ignore>{message.content}</p></article>
               ) : (
                 <article key={message.id} className="copilot-message assistant">
                   <span className="assistant-avatar"><Sparkles size={13} /></span>
-                  <div>{message.content ? <MarkdownContent source={message.content} /> : loading ? <span className="assistant-generating"><LoadingDots /><small>正在检索并生成</small></span> : <p>没有生成内容。</p>}
+                  <div>
+                    {loading && message.id === messages[messages.length - 1]?.id ? <AssistantGenerationStatus startedAt={message.startedAt || Date.now()} compact={Boolean(message.content)} /> : null}
+                    {message.content ? <MarkdownContent source={message.content} /> : loading ? null : <p>没有生成内容。</p>}
                     {message.sources?.length ? <section className="assistant-sources"><h3>引用资料</h3>{message.sources.map((source) => <button key={`${source.assetId}-${source.heading}`} onClick={() => onOpenSource(source.assetId)}><span><strong>{source.title}</strong><em>{source.heading || "相关内容"}</em></span><ExternalLink size={13} /></button>)}</section> : null}
                     {message.content ? <footer className="copilot-result-actions"><button onClick={() => onApply(message.content, "insert")}><ArrowDownToLine size={13} />插入光标处</button><button onClick={() => onApply(message.content, "append")}>追加到文末</button><button onClick={() => setReplaceOpen(true)}>{selection ? "替换选中内容" : "替换全文"}</button><button onClick={() => void navigator.clipboard.writeText(message.content)}><Copy size={13} />复制</button></footer> : null}
                   </div>
@@ -240,6 +270,7 @@ export function NoteInspector({
             <div className="copilot-composer-wrap">
               {resourcesOpen ? <div className="copilot-resources"><header><strong>指定资料</strong><span>{selectedAssetIds.length ? `已选 ${selectedAssetIds.length} 项` : "默认自动召回"}</span></header><div>{availableAssets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => setSelectedAssetIds((current) => event.target.checked ? [...current, asset.id] : current.filter((id) => id !== asset.id))} /><span>{asset.title}</span></label>)}</div></div> : null}
               <div className="copilot-composer">
+                <div className="composer-note-context" title={`基于：${note.title}`}><FileText size={14} /><span>基于</span><strong data-i18n-ignore>{note.title}</strong></div>
                 {selection ? <>
                   <span className="composer-context">已加入选中内容 · {selection.length} 字</span>
                   <div className="selection-quick-actions">
@@ -252,7 +283,7 @@ export function NoteInspector({
                   <span className="composer-tools"><button className={resourcesOpen ? "active" : ""} onClick={() => setResourcesOpen((value) => !value)} title="添加资料"><Paperclip size={15} /></button><label><input type="checkbox" checked={knowledgeSearch} onChange={(event) => setKnowledgeSearch(event.target.checked)} />知识</label><label><input type="checkbox" checked={webSearch} onChange={(event) => setWebSearch(event.target.checked)} />联网</label></span>
                   <span className="composer-send-group">
                     <label className="action-select"><select value={action} onChange={(event) => setAction(event.target.value as AssistantAction)}>{Object.entries(actionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={12} /></label>
-                    {models.length ? <label className="model-select"><select aria-label="助手角色" value={modelId} onChange={(event) => setModelId(event.target.value)}>{models.map((model) => <option key={model.id} value={model.id}>{assistantRole(model)} · {model.name}</option>)}</select><ChevronDown size={12} /></label> : <span className="model-fallback">自动模型</span>}
+                    {models.length ? <ModelPicker className="assistant-model-picker" ariaLabel="选择助手模型" models={models} value={modelId} onChange={setModelId} getMeta={assistantRole} /> : <span className="model-fallback">自动模型</span>}
                     <button className={`copilot-send ${loading ? "stop" : ""}`} aria-label={loading ? "停止生成" : "开始生成"} onClick={() => loading ? controllerRef.current?.abort() : void runAssistant()}>{loading ? <Square size={13} /> : <Send size={14} />}</button>
                   </span>
                 </div>
@@ -263,7 +294,7 @@ export function NoteInspector({
           <div className="inspector-scroll lifecycle-panel">
             <section><h3>发布策略</h3><label className="auto-publish-toggle"><input type="checkbox" checked={note.auto_publish} onChange={(event) => void onAutoPublishChange(event.target.checked)} /><span><strong>静置后自动发布</strong><em>草稿停止变化 45 秒后创建新版本并更新 GBrain。</em></span></label></section>
             <section><h3><Tag size={15} />标签</h3><div className="editable-tags">{note.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><button onClick={() => setTagsOpen(true)}>编辑标签</button></section>
-            <section><h3><History size={15} />发布版本</h3>{(lifecycle?.revisions || []).map((revision) => <div className="lifecycle-row" key={revision.id}><span>v{revision.version} · {new Date(revision.created_at).toLocaleString("zh-CN")}</span><button onClick={() => setRevertVersion(revision.version)}><RotateCcw size={12} />回滚</button></div>)}{!lifecycle?.revisions?.length ? <p>尚未发布，草稿不会进入 GBrain。</p> : null}</section>
+            <section><h3><History size={15} />发布版本</h3>{(lifecycle?.revisions || []).map((revision) => <div className="lifecycle-row" key={revision.id}><span>v{revision.version} · {new Date(revision.created_at).toLocaleString(locale)}</span><button onClick={() => setRevertVersion(revision.version)}><RotateCcw size={12} />回滚</button></div>)}{!lifecycle?.revisions?.length ? <p>尚未发布，草稿不会进入 GBrain。</p> : null}</section>
             <section><h3><Clock3 size={15} />时间线</h3>{(lifecycle?.timeline || []).slice(0, 12).map((entry, index) => <div className="timeline-row" key={index}><i /><div><strong>{String(entry.summary || "内容更新")}</strong><span>{String(entry.date || entry.created_at || "")}</span></div></div>)}</section>
             <section><h3>反向链接</h3>{(lifecycle?.backlinks || []).map((item, index) => <div className="lifecycle-row" key={index}><span>{String(item.from_slug || item.from || item.slug || "关联页面")}</span><ExternalLink size={13} /></div>)}{!lifecycle?.backlinks?.length ? <p>暂无反向链接</p> : null}</section>
           </div>

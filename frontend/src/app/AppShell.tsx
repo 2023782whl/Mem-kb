@@ -1,8 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, CircleUserRound, LogOut, MessageSquareText, NotebookPen, Settings } from "lucide-react";
+import { BookOpen, LogOut, MessageSquareText, NotebookPen, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { api } from "../api/client";
 import { Brand } from "../shared/Brand";
+import { LanguageSwitcher } from "../shared/LanguageSwitcher";
+import { AvatarEditorDialog } from "../shared/AvatarEditorDialog";
+import { UserAvatar } from "../shared/UserAvatar";
+import { TOPBAR_PANEL_SLOT_ID } from "../shared/TopbarPanelTrigger";
 import type { User } from "../types/domain";
 
 function GBrainStatus() {
@@ -24,8 +28,9 @@ function pageMeta(location: string) {
   return { title: "知识问答", detail: "有来源的企业级 AI 问答" };
 }
 
-export function AppShell({ user, onLogout, children }: { user: User; onLogout: () => void; children: ReactNode }) {
+export function AppShell({ user, onLogout, onUserChange, children }: { user: User; onLogout: () => void; onUserChange: (user: User) => void; children: ReactNode }) {
   const [location, navigate] = useLocation();
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const meta = pageMeta(location);
   const roleLabel = user.role === "admin" ? "系统管理员" : user.role === "editor" ? "编辑者" : "查看者";
   async function logout() {
@@ -50,17 +55,21 @@ export function AppShell({ user, onLogout, children }: { user: User; onLogout: (
           <NavItem href="/settings" label="设置" tone="slate"><Settings size={20} /></NavItem>
         </nav>
         <div className="primary-user">
-          <span title={`${user.name} · ${roleLabel}`}><CircleUserRound size={21} /></span>
+          <button className="primary-avatar-button" type="button" onClick={() => setAvatarOpen(true)} title="设置个人头像" aria-label="设置个人头像"><UserAvatar user={user} size={30} /></button>
           <button className="icon-button" onClick={() => void logout()} title="退出登录"><LogOut size={17} /></button>
         </div>
       </aside>
       <section className="app-stage">
         <header className="topbar">
-          <div className="topbar-context"><strong>{meta.title}</strong><span>{meta.detail}</span></div>
-          <div className="topbar-actions"><GBrainStatus /><span className="topbar-user"><CircleUserRound size={17} /><span><strong>{user.name}</strong><em>{roleLabel}</em></span></span></div>
+          <div className="topbar-leading">
+            <div id={TOPBAR_PANEL_SLOT_ID} className="topbar-panel-trigger-slot" />
+            <div className="topbar-context"><strong>{meta.title}</strong><span>{meta.detail}</span></div>
+          </div>
+          <div className="topbar-actions"><GBrainStatus /><LanguageSwitcher /><button className="topbar-user" type="button" onClick={() => setAvatarOpen(true)} title="打开个人资料" aria-label="打开个人资料"><UserAvatar user={user} size={30} /><span><strong>{user.name}</strong><em>{roleLabel}</em></span></button></div>
         </header>
         {children}
       </section>
+      <AvatarEditorDialog open={avatarOpen} user={user} onClose={() => setAvatarOpen(false)} onSaved={onUserChange} />
     </div>
   );
 }

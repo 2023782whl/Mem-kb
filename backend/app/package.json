@@ -11,13 +11,14 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "db:setup": "tsx src/db/setup.ts",
+    "db:migrate": "tsx src/db/setup.ts --migrate-only",
     "db:create-admin": "tsx src/db/create-admin.ts",
     "data:backfill": "tsx src/db/backfill.ts",
     "analysis:backfill": "tsx src/db/backfill-analysis.ts",
     "embedding:backfill": "tsx src/db/backfill-embeddings.ts",
     "test": "npm run typecheck && npm run test:unit",
     "test:unit": "vitest run",
-    "test:regression": "AITEAM_MODEL_MODE=mock tsx tests/regression.ts"
+    "test:regression": "AITEAM_MODEL_MODE=mock ASSET_QUEUE_NAME=aiteam-asset-processing-regression tsx tests/regression.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

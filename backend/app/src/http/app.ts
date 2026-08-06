@@ -20,13 +20,12 @@ import { registerUserRoutes } from "../modules/users/routes.js";
 import { registerTraceRoutes } from "../modules/traces/routes.js";
 import { registerEvaluationRoutes } from "../modules/evaluation/routes.js";
 import { registerConsolidationRoutes } from "../modules/consolidation/routes.js";
-import { startConsolidationScheduler, stopConsolidationScheduler } from "../modules/consolidation/service.js";
-import { startWechatChannels, stopWechatChannels } from "../modules/channels/service.js";
+import { registerModelRoutes } from "../modules/models/routes.js";
 import { withDbRequestContext } from "../db/pool.js";
-import { resumePendingAssetProcessing } from "../services/asset-processing.js";
 import { closeAssetQueue } from "../services/asset-queue.js";
+import { closeMaintenanceQueue } from "../services/maintenance-queue.js";
 import { loggerOptions } from "../observability/logger.js";
-import { httpDuration, httpRequests, metrics, refreshQueueMetrics } from "../observability/metrics.js";
+import { httpDuration, httpRequests, metrics, refreshRuntimeMetrics } from "../observability/metrics.js";
 import { toHttpErrorResponse } from "./errors.js";
 
 const requestStartedAt = new WeakMap<object, bigint>();
@@ -36,6 +35,7 @@ export async function buildApp() {
   app.setErrorHandler((error, request, reply) => {
     const response = toHttpErrorResponse(error, env.runtime);
     if (response.log) request.log.error({ err: error }, "request failed");
+    if (response.body.retryAfterSeconds) reply.header("retry-after", response.body.retryAfterSeconds);
     reply.code(response.statusCode).send(response.body);
   });
   await app.register(helmet, {
@@ -77,6 +77,7 @@ export async function buildApp() {
   });
 
   await registerSystemRoutes(app);
+  await registerModelRoutes(app);
   await registerAuthRoutes(app);
   await registerUserRoutes(app);
   await registerWorkspaceRoutes(app);
@@ -91,10 +92,6 @@ export async function buildApp() {
   await registerTraceRoutes(app);
   await registerEvaluationRoutes(app);
   await registerConsolidationRoutes(app);
-  app.addHook("onReady", async () => {
-    await Promise.all([resumePendingAssetProcessing(), startWechatChannels()]);
-    startConsolidationScheduler();
-  });
   app.addHook("onResponse", async (request, reply) => {
     const route = request.routeOptions.url || request.url.split("?")[0];
     const status = String(reply.statusCode);
@@ -103,14 +100,12 @@ export async function buildApp() {
     if (started) httpDuration.observe({ method: request.method, route, status }, Number(process.hrtime.bigint() - started) / 1e9);
   });
   app.get("/metrics", async (_request, reply) => {
-    await refreshQueueMetrics().catch(() => undefined);
+    await refreshRuntimeMetrics().catch(() => undefined);
     reply.type(metrics.contentType);
     return metrics.metrics();
   });
   app.addHook("onClose", async () => {
-    stopWechatChannels();
-    stopConsolidationScheduler();
-    await closeAssetQueue();
+    await Promise.all([closeAssetQueue(), closeMaintenanceQueue()]);
   });
 
   return app;

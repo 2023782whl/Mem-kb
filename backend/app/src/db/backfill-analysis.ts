@@ -1,6 +1,7 @@
 import { pool, query } from "./pool.js";
 import type { Asset } from "./schema.js";
 import { indexKnowledgeAsset } from "../services/knowledge-indexer.js";
+import { logger } from "../utils/logger.js";
 
 async function main() {
   const selector = process.argv[2]?.trim();
@@ -29,15 +30,15 @@ async function main() {
       sha256: asset.sha256,
       source: "aiteam-analysis-backfill"
     });
-    console.log(`${asset.title}: ${analysis.tags.join("、")}`);
+    logger.info({ title: asset.title, tags: analysis.tags }, "Asset analyzed");
   }
 
-  console.log(`Analyzed ${assets.length} assets.`);
+  logger.info({ count: assets.length }, "Analysis backfill completed");
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    logger.error({ error }, "Analysis backfill failed");
     process.exitCode = 1;
   })
   .finally(() => pool.end());

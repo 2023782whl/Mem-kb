@@ -184,9 +184,11 @@ async function seed(client: pg.PoolClient) {
   }
 }
 
+import { logger } from "../utils/logger.js";
+
 if (/setup\.(ts|js)$/.test(process.argv[1] || "")) {
   await ensureDatabase();
-  if (env.runtime === "production") await migrateOnly();
+  if (env.runtime === "production" || process.argv.includes("--migrate-only")) await migrateOnly();
   else await migrateAndSeed();
-  console.log(`Database ready: ${env.database.name}`);
+  logger.info({ database: env.database.name }, "Database ready");
 }

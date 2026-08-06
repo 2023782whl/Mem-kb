@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { env } from "../config/env.js";
+import { resilientFetch } from "./outbound.js";
 
 type ToolResult = {
   content?: Array<{ type: string; text?: string }>;
@@ -70,7 +71,7 @@ function parseToolText(result: ToolResult) {
 }
 
 export async function gbrainHealth() {
-  const response = await fetch(`${env.gbrain.baseUrl}/health`, { signal: AbortSignal.timeout(2000) });
+  const response = await resilientFetch("gbrain:health", `${env.gbrain.baseUrl}/health`, {}, { timeoutMs: 2_000, maxAttempts: 1 });
   if (!response.ok) return { ok: false, status: response.status };
   const body = (await response.json()) as Record<string, unknown>;
   return { ok: true, ...body };
@@ -78,7 +79,7 @@ export async function gbrainHealth() {
 
 export async function callGBrainTool<T = unknown>(name: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<T> {
   const token = await ensureToken();
-  const response = await fetch(env.gbrain.mcpUrl, {
+  const response = await resilientFetch("gbrain:mcp", env.gbrain.mcpUrl, {
     method: "POST",
     headers: {
       authorization: `Bearer ${token}`,
@@ -90,9 +91,8 @@ export async function callGBrainTool<T = unknown>(name: string, args: Record<str
       id: Date.now(),
       method: "tools/call",
       params: { name, arguments: args }
-    }),
-    signal: AbortSignal.timeout(timeoutMs)
-  });
+    })
+  }, { timeoutMs, maxAttempts: name === "search" || name.startsWith("get_") || name === "recall" ? 2 : 1 });
   const raw = await response.text();
   const payload = parseSseJson(raw);
   if (!response.ok || payload.error) {

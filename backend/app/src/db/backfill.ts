@@ -2,6 +2,7 @@ import { pool, query } from "./pool.js";
 import type { Asset } from "./schema.js";
 import { rebuildWorkspaceRelations } from "../services/knowledge-indexer.js";
 import { writeProcessedMarkdown } from "../services/storage.js";
+import { logger } from "../utils/logger.js";
 
 async function main() {
   const assets = await query<Asset>(
@@ -34,12 +35,12 @@ async function main() {
     await rebuildWorkspaceRelations(workspace.tenant_id, workspace.workspace_id);
   }
   const orphanNodes = await query<{ count: number }>(`select count(*)::int as count from graph_nodes where asset_id is null`);
-  console.log(`Backfilled ${assets.length} assets; orphan graph nodes: ${orphanNodes[0]?.count || 0}`);
+  logger.info({ assetCount: assets.length, orphanNodes: orphanNodes[0]?.count || 0 }, "Backfill completed");
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    logger.error({ error }, "Backfill failed");
     process.exitCode = 1;
   })
   .finally(() => pool.end());

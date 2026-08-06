@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowDownUp, Boxes, ChevronRight, FileText, FolderTree, Grid2X2, Image as ImageIcon,
   List, PackagePlus, Plus, RotateCcw, Search, Settings2, Trash2, Upload, X
@@ -18,6 +18,9 @@ import { WorkspaceRail } from "./WorkspaceRail";
 import { WorkspaceManageDialog } from "./WorkspaceManageDialog";
 import { ResizeHandle } from "../../shared/ResizeHandle";
 import { usePersistentNumber } from "../../shared/usePersistentState";
+import { useI18n, type AppLocale } from "../../i18n";
+import { useDockedPanel } from "../../shared/useDockedPanel";
+import { TopbarPanelTrigger } from "../../shared/TopbarPanelTrigger";
 
 function isDeletedAsset(asset?: Asset | null) {
   return Boolean(asset?.deleted_at || asset?.status === "deleted");
@@ -25,12 +28,17 @@ function isDeletedAsset(asset?: Asset | null) {
 
 const DEFAULT_ASSET_RAIL_WIDTH = 244;
 const DEFAULT_GRAPH_WIDTH = 520;
+const MIN_GRAPH_WIDTH = 380;
+const MAX_GRAPH_WIDTH = 1280;
+const MIN_ASSET_BROWSER_WIDTH = 340;
+const KNOWLEDGE_WORKSPACE_PINNED_KEY = "mem-kb:knowledge-workspace-pinned-v2";
 
 export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
+  const { locale } = useI18n();
   const { allWorkspaces, active, activeId, setActiveId, loading, error: workspaceError, refresh: refreshWorkspaces } = useWorkspaces(kind);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [workbenchView, setWorkbenchView] = useState<WorkbenchView>("graph");
+  const [workbenchView, setWorkbenchView] = useState<WorkbenchView>("summary");
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,8 +63,31 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const imageSearchRef = useRef<HTMLInputElement>(null);
   const loadRequestRef = useRef(0);
+  const pageRef = useRef<HTMLElement>(null);
+  const [pageWidth, setPageWidth] = useState(0);
   const [assetRailWidth, setAssetRailWidth] = usePersistentNumber("mem-kb:knowledge-asset-rail-width", DEFAULT_ASSET_RAIL_WIDTH, 190, 340);
-  const [graphWidth, setGraphWidth] = usePersistentNumber("mem-kb:knowledge-graph-width", DEFAULT_GRAPH_WIDTH, 380, 760);
+  const [graphWidth, setGraphWidth] = usePersistentNumber("mem-kb:knowledge-graph-width", DEFAULT_GRAPH_WIDTH, MIN_GRAPH_WIDTH, MAX_GRAPH_WIDTH);
+  const workspacePanel = useDockedPanel(KNOWLEDGE_WORKSPACE_PINNED_KEY);
+
+  const availableGraphWidth = pageWidth
+    ? pageWidth - (workspacePanel.open ? assetRailWidth + 8 : 0) - 8 - MIN_ASSET_BROWSER_WIDTH
+    : MAX_GRAPH_WIDTH;
+  const maxGraphWidth = Math.max(MIN_GRAPH_WIDTH, Math.min(MAX_GRAPH_WIDTH, availableGraphWidth));
+  const renderedGraphWidth = Math.min(graphWidth, maxGraphWidth);
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+    const syncWidth = () => setPageWidth(page.clientWidth);
+    syncWidth();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(syncWidth);
+    observer?.observe(page);
+    if (!observer) window.addEventListener("resize", syncWidth);
+    return () => {
+      observer?.disconnect();
+      if (!observer) window.removeEventListener("resize", syncWidth);
+    };
+  }, []);
 
   const scopedAssets = kind === "image" && (categoryId || productId)
     ? assets.filter((asset) => (!categoryId || asset.category_id === categoryId) && (!productId || asset.product_id === productId))
@@ -68,6 +99,7 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
       const order = new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
       return sortNewest ? order : -order;
     });
+  const groupedAssets = groupAssets(visibleAssets);
   const selectedAsset = assets.find((asset) => asset.id === selectedId && !isDeletedAsset(asset));
   const deleteTargetIsDeleted = isDeletedAsset(deleteTarget);
 
@@ -83,9 +115,11 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
       const workspaceId = activeId;
       const [assetResult, graphResult, categoryResult, productResult] = await Promise.all([
         api.assets(workspaceId, kind === "image" ? "image" : "all", search, showDeleted),
-        api.graph(workspaceId),
-        kind === "image" ? api.categories(workspaceId) : Promise.resolve(null),
-        kind === "image" ? api.products(workspaceId) : Promise.resolve(null)
+        // The list and its summary remain usable if a secondary graph/category
+        // request is temporarily unavailable during a workspace switch.
+        api.graph(workspaceId).catch(() => ({ nodes: [], edges: [] })),
+        kind === "image" ? api.categories(workspaceId).catch(() => null) : Promise.resolve(null),
+        kind === "image" ? api.products(workspaceId).catch(() => null) : Promise.resolve(null)
       ]);
       if (requestId !== loadRequestRef.current) return;
       setAssets(assetResult.assets);
@@ -118,7 +152,7 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
   }, [kind]);
   useEffect(() => {
     setSelectedId("");
-    setWorkbenchView("graph");
+    setWorkbenchView("summary");
   }, [activeId, kind]);
   useEffect(() => {
     if (!activeId || !assets.some((asset) => asset.status === "queued" || asset.status === "indexing")) return;
@@ -202,7 +236,7 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
     const wasSelected = asset.id === selectedId;
     if (wasSelected) {
       setSelectedId("");
-      setWorkbenchView("graph");
+      setWorkbenchView("summary");
     }
     setBusy(true);
     setNotice("");
@@ -230,7 +264,7 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
     setShowDeleted((current) => !current);
     setAssets([]);
     setSelectedId("");
-    setWorkbenchView("graph");
+    setWorkbenchView("summary");
     setDeleteTarget(null);
     setNotice("");
   }
@@ -251,12 +285,14 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
 
   return (
     <main
-      className={`knowledge-page resizable-knowledge-page ${kind === "image" ? "image-mode" : ""}`}
-      style={{ "--asset-rail-width": `${assetRailWidth}px`, "--graph-pane-width": `${graphWidth}px` } as CSSProperties}
+      ref={pageRef}
+      className={`knowledge-page resizable-knowledge-page ${kind === "image" ? "image-mode" : ""} ${workspacePanel.open ? "" : "workspace-collapsed"}`}
+      style={{ "--asset-rail-width": `${assetRailWidth}px`, "--graph-pane-width": `${renderedGraphWidth}px` } as CSSProperties}
     >
-      <WorkspaceRail workspaces={allWorkspaces} activeId={activeId} kind={kind} onSelect={setActiveId} onCreate={() => setWorkspaceDialog(true)} onManage={(workspace) => { setManagedWorkspace(workspace); setWorkspaceManagerOpen(true); }} />
+      <WorkspaceRail workspaces={allWorkspaces} activeId={activeId} kind={kind} pinned={workspacePanel.pinned} onSelect={(id, options) => { if (id !== activeId) { setSelectedId(""); setWorkbenchView("summary"); setActiveId(id); } if (!options?.keepPanelOpen) workspacePanel.closeTemporaryPanel(); }} onCreate={() => setWorkspaceDialog(true)} onManage={(workspace) => { setManagedWorkspace(workspace); setWorkspaceManagerOpen(true); }} onTogglePinned={workspacePanel.togglePinned} />
       <ResizeHandle label="调整资产列表宽度" onDelta={(delta) => setAssetRailWidth((current) => current + delta)} onReset={() => setAssetRailWidth(DEFAULT_ASSET_RAIL_WIDTH)} />
-      <section className="asset-browser">
+      <TopbarPanelTrigger label={workspacePanel.open ? "收起知识空间" : "展开知识空间"} expanded={workspacePanel.open} onToggle={workspacePanel.open ? workspacePanel.closePanel : workspacePanel.openPanel} />
+      <section className="asset-browser" onPointerDown={workspacePanel.closeTemporaryPanel}>
         <header className="asset-browser-head">
           <div className="workspace-title"><span>{kind === "document" ? <FileText size={25} /> : <ImageIcon size={25} />}</span><div><h1>{active?.name || (loading ? "加载中" : "暂无 Workspace")}</h1><p>{active?.scope === "personal" ? "个人沉淀" : "团队知识"} · {active?.description || (kind === "document" ? "运营知识与 SOP" : "多层类目素材资产")}</p></div></div>
           <button className="button primary" onClick={() => fileRef.current?.click()} disabled={!activeId || busy}><Upload size={17} />上传{kind === "document" ? "文档" : "图片"}</button>
@@ -300,18 +336,21 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
           </div>
         ) : viewMode === "grid" ? (
           <div className="document-grid">
-            {visibleAssets.map((asset) => { const deleted = isDeletedAsset(asset); return <article key={asset.id} className={`document-card ${selectedId === asset.id ? "selected" : ""}`}><button className="document-card-main" onClick={() => { if (!deleted) { setSelectedId(asset.id); setWorkbenchView("preview"); } }}><header><FileTypeIcon format={asset.format} title={asset.title} /><span><strong>{asset.title}</strong><em>{resolveFileFormat(asset.format, asset.title).toUpperCase()}</em></span></header><p>{asset.summary || "等待生成文档摘要"}</p><div className="document-tags">{asset.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}{!asset.tags.length ? <span>暂无标签</span> : null}</div><footer><AssetStatus status={asset.status} /><time>{new Date(asset.updated_at).toLocaleDateString("zh-CN")}</time></footer></button>{deleted ? <div className="asset-trash-actions"><button onClick={() => void restoreAsset(asset)} title="恢复文档"><RotateCcw size={15} /></button><button className="danger" onClick={() => setDeleteTarget(asset)} title="永久删除文档"><Trash2 size={15} /></button></div> : <button className="asset-row-delete" onClick={() => setDeleteTarget(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={15} /></button>}</article>; })}
+            {visibleAssets.map((asset) => { const deleted = isDeletedAsset(asset); return <article key={asset.id} className={`document-card ${selectedId === asset.id ? "selected" : ""}`}><button className="document-card-main" onClick={() => { if (!deleted) { setSelectedId(asset.id); setWorkbenchView("preview"); } }}><header><FileTypeIcon format={asset.format} title={asset.title} /><span><strong>{asset.title}</strong><em>{resolveFileFormat(asset.format, asset.title).toUpperCase()}</em></span></header><p>{asset.summary || "等待生成文档摘要"}</p><div className="document-tags">{asset.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}{!asset.tags.length ? <span>暂无标签</span> : null}</div><footer><AssetStatus status={asset.status} /><time>{formatAssetDate(asset.updated_at, locale)}</time></footer></button>{deleted ? <div className="asset-trash-actions"><button onClick={() => void restoreAsset(asset)} title="恢复文档"><RotateCcw size={15} /></button><button className="danger" onClick={() => setDeleteTarget(asset)} title="永久删除文档"><Trash2 size={15} /></button></div> : <button className="asset-row-delete" onClick={() => setDeleteTarget(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={15} /></button>}</article>; })}
             {!visibleAssets.length && !busy ? <EmptyState title="这里还没有文档" detail="上传 Markdown、PDF、Word 或 Excel 开始沉淀。" /> : null}
           </div>
         ) : (
           <div className="document-list">
-            {visibleAssets.map((asset) => { const deleted = isDeletedAsset(asset); return <div key={asset.id} className={`asset-list-row ${selectedId === asset.id ? "selected" : ""}`}><button className="asset-row-main" onClick={() => { if (!deleted) { setSelectedId(asset.id); setWorkbenchView("preview"); } }}><FileTypeIcon format={asset.format} title={asset.title} /><span><strong>{asset.title}</strong><em>{resolveFileFormat(asset.format, asset.title).toUpperCase()} · {formatBytes(asset.size_bytes)} · {new Date(asset.created_at).toLocaleDateString("zh-CN")}</em></span><AssetStatus status={asset.status} /></button>{deleted ? <div className="asset-trash-actions"><button onClick={() => void restoreAsset(asset)} title="恢复文档"><RotateCcw size={15} /></button><button className="danger" onClick={() => setDeleteTarget(asset)} title="永久删除文档"><Trash2 size={15} /></button></div> : <button className="asset-row-delete" onClick={() => setDeleteTarget(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={15} /></button>}</div>; })}
+            {groupedAssets.map((group) => <Fragment key={group.label}>
+              <h3 className="asset-date-heading">{group.label}</h3>
+              {group.items.map((asset) => { const deleted = isDeletedAsset(asset); return <div key={asset.id} className={`asset-list-row ${selectedId === asset.id ? "selected" : ""}`}><button className="asset-row-main" onClick={() => { if (!deleted) { setSelectedId(asset.id); setWorkbenchView("preview"); } }}><FileTypeIcon format={asset.format} title={asset.title} /><span><strong>{asset.title}</strong><em>{resolveFileFormat(asset.format, asset.title).toUpperCase()} · {formatBytes(asset.size_bytes)}</em></span><span className="asset-row-tail"><AssetStatus status={asset.status} /><time>{formatAssetDate(asset.updated_at, locale)}</time></span></button>{deleted ? <div className="asset-trash-actions"><button onClick={() => void restoreAsset(asset)} title="恢复文档"><RotateCcw size={15} /></button><button className="danger" onClick={() => setDeleteTarget(asset)} title="永久删除文档"><Trash2 size={15} /></button></div> : <button className="asset-row-delete" onClick={() => setDeleteTarget(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={15} /></button>}</div>; })}
+            </Fragment>)}
             {!visibleAssets.length && !busy ? <EmptyState title="这里还没有文档" detail="上传 Markdown、PDF、Word 或 Excel 开始沉淀。" /> : null}
           </div>
         )}
       </section>
 
-      <ResizeHandle label="调整右侧图谱宽度" onDelta={(delta) => setGraphWidth((current) => current - delta)} onReset={() => setGraphWidth(DEFAULT_GRAPH_WIDTH)} />
+      <ResizeHandle label="调整右侧图谱宽度" onDelta={(delta) => setGraphWidth((current) => Math.min(maxGraphWidth, Math.max(MIN_GRAPH_WIDTH, current - delta)))} onReset={() => setGraphWidth(DEFAULT_GRAPH_WIDTH)} />
 
       <AssetWorkbench
         workspaceName={active?.name || "Workspace"}
@@ -334,6 +373,36 @@ export function KnowledgeCenterPage({ kind }: { kind: "document" | "image" }) {
       <ConfirmActionDialog open={Boolean(deleteTarget)} danger={deleteTargetIsDeleted} busy={busy} title={deleteTargetIsDeleted ? `永久删除${deleteTarget?.type === "image" ? "图片" : "文档"}` : "移入回收站"} subject={deleteTarget?.title} description={deleteTargetIsDeleted ? "将永久清理原文件和数据库记录，此操作无法撤销。" : "将从检索、图谱和 GBrain 中移除，但保留原文件，可在回收站恢复。"} confirmText={deleteTargetIsDeleted ? "永久删除" : "移入回收站"} onCancel={() => setDeleteTarget(null)} onConfirm={() => deleteTarget ? deleteAsset(deleteTarget) : undefined} />
     </main>
   );
+}
+
+function groupAssets(assets: Asset[]) {
+  const groups = new Map<string, Asset[]>();
+  for (const asset of assets) {
+    const label = relativeAssetDate(asset.updated_at);
+    groups.set(label, [...(groups.get(label) || []), asset]);
+  }
+  return Array.from(groups, ([label, items]) => ({ label, items }));
+}
+
+function relativeAssetDate(value: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+  if (days <= 0) return "今天";
+  if (days === 1) return "昨天";
+  if (days < 30) return "最近 30 天";
+  return "更早";
+}
+
+function formatAssetDate(value: string, locale: AppLocale) {
+  const date = new Date(value);
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  return new Intl.DateTimeFormat(locale, sameDay
+    ? { hour: "2-digit", minute: "2-digit" }
+    : { month: "2-digit", day: "2-digit" }).format(date);
 }
 
 function CatalogBar({ categories, products, categoryId, productId, onCategory, onProduct, onCreate, onManage }: {

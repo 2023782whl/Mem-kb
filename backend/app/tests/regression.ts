@@ -11,7 +11,7 @@ import { ensureDatabase, migrateAndSeed } from "../src/db/setup.js";
 import { env } from "../src/config/env.js";
 import { EOperaDocumentProcessor } from "../src/services/document-processor.js";
 import { processAsset } from "../src/services/asset-processing.js";
-import { redisConnection } from "../src/services/asset-queue.js";
+import { assetQueueName, workerRedisConnection, type AssetQueueJob } from "../src/services/asset-queue.js";
 
 const cleanupState = {
   app: null as Awaited<ReturnType<typeof buildApp>> | null,
@@ -21,7 +21,7 @@ const cleanupState = {
   noteIds: [] as string[],
   workspaceIds: [] as string[],
   files: [] as string[],
-  worker: null as Worker<{ assetId: string }> | null
+  worker: null as Worker<AssetQueueJob> | null
 };
 
 function assert(condition: unknown, message: string) {
@@ -70,10 +70,14 @@ async function main() {
   await migrateAndSeed();
   const app = await buildApp();
   cleanupState.app = app;
-  cleanupState.worker = new Worker<{ assetId: string }>(
-    "aiteam-asset-processing",
-    async (job) => processAsset(job.data.assetId),
-    { connection: redisConnection, concurrency: 2 }
+  cleanupState.worker = new Worker<AssetQueueJob>(
+    assetQueueName,
+    async (job) => processAsset(job.data.assetId, {
+      attempt: job.attemptsMade + 1,
+      maxAttempts: Number(job.opts.attempts || 1),
+      processingId: job.data.processingId
+    }),
+    { connection: workerRedisConnection, concurrency: 2 }
   );
   await app.listen({ host: "127.0.0.1", port: 0 });
   const address = app.server.address() as AddressInfo | null;
@@ -341,7 +345,7 @@ async function main() {
   assert(imageUpload.ok && Boolean(imagePayload.asset?.id), "image upload failed");
   cleanupState.assetIds.push(imagePayload.asset!.id);
   const processedImage = await waitForAsset(imagePayload.asset!.id, adminToken);
-  assert(processedImage.asset.status === "ready", "image VLM pipeline failed");
+  assert(processedImage.asset.status === "ready", `image VLM pipeline failed: ${processedImage.asset.error || "unknown"}`);
 
   const crossWorkspaceAssistant = await json<{ error: string }>(`/api/notes/${noteId}/assist/stream`, {
     method: "POST",

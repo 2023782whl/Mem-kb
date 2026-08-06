@@ -7,9 +7,12 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     css: false,
+    testTimeout: 10_000,
+    fileParallelism: false,
     include: ["src/**/*.test.{ts,tsx}"]
   },
   build: {
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: {

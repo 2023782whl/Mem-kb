@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
 import { LoadingDots } from "./LoadingSystem";
 
-let initialized = false;
+type MermaidInstance = typeof import("mermaid")["default"];
+
+let mermaidPromise: Promise<MermaidInstance> | null = null;
 
 async function getMermaid() {
-  const instance = (await import("mermaid")).default;
-  if (!initialized) {
+  mermaidPromise ??= import("mermaid").then(({ default: instance }) => {
     instance.initialize({
       startOnLoad: false,
       securityLevel: "strict",
@@ -20,9 +21,9 @@ async function getMermaid() {
         tertiaryColor: "#ffffff"
       }
     });
-    initialized = true;
-  }
-  return instance;
+    return instance;
+  });
+  return mermaidPromise;
 }
 
 export function MermaidDiagram({ source }: { source: string }) {

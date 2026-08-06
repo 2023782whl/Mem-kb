@@ -15,6 +15,23 @@ const note: Note = {
 afterEach(() => vi.restoreAllMocks());
 
 describe("NoteInspector", () => {
+  it("offers starter questions and keeps the current note visible in the composer", async () => {
+    const assist = vi.spyOn(api, "streamNoteAssist").mockImplementation(async (_id, _body, handlers) => {
+      handlers.done?.("问题回答");
+    });
+    render(<NoteInspector note={note} assets={[]} selection="" cursorContext="正文" onApply={vi.fn()} onTagsChange={vi.fn()} onAutoPublishChange={vi.fn()} onReverted={vi.fn()} onOpenSource={vi.fn()} />);
+
+    expect(screen.getByText("Hi，我可以帮你做什么")).toBeVisible();
+    expect(screen.getByTitle("基于：测试笔记")).toHaveTextContent("基于测试笔记");
+    fireEvent.click(screen.getByRole("button", { name: "这份笔记解决了什么问题？" }));
+    await waitFor(() => expect(assist).toHaveBeenCalledTimes(1));
+    expect(assist.mock.calls[0][1]).toMatchObject({
+      action: "custom",
+      instruction: "这份笔记解决了什么问题？",
+      locale: "zh-CN"
+    });
+  });
+
   it("keeps all output actions available after generation", async () => {
     vi.spyOn(api, "streamNoteAssist").mockImplementation(async (_id, _body, handlers) => {
       handlers.delta?.("生成结果");
@@ -44,5 +61,35 @@ describe("NoteInspector", () => {
     fireEvent.click(screen.getByRole("button", { name: "优化" }));
     await waitFor(() => expect(assist).toHaveBeenCalledTimes(2));
     expect(assist.mock.calls[1][1]).toMatchObject({ action: "rewrite", selection: "待优化内容" });
+  });
+
+  it("sends a suggested question immediately when the note opens the assistant", async () => {
+    const assist = vi.spyOn(api, "streamNoteAssist").mockImplementation(async (_id, _body, handlers) => {
+      handlers.delta?.("基于当前笔记的回答");
+      handlers.done?.("基于当前笔记的回答");
+    });
+    const onPromptHandled = vi.fn();
+    render(<NoteInspector
+      note={note}
+      assets={[]}
+      selection=""
+      cursorContext="正文"
+      onApply={vi.fn()}
+      onTagsChange={vi.fn()}
+      onAutoPublishChange={vi.fn()}
+      onReverted={vi.fn()}
+      onOpenSource={vi.fn()}
+      pendingPrompt={{ id: 7, noteId: note.id, text: "这篇笔记的关键步骤是什么？" }}
+      onPromptHandled={onPromptHandled}
+    />);
+
+    await waitFor(() => expect(assist).toHaveBeenCalledTimes(1));
+    expect(assist.mock.calls[0][1]).toMatchObject({
+      action: "custom",
+      instruction: "这篇笔记的关键步骤是什么？",
+      locale: "zh-CN"
+    });
+    expect(onPromptHandled).toHaveBeenCalledWith(7);
+    await waitFor(() => expect(screen.getByText("基于当前笔记的回答")).toBeVisible());
   });
 });

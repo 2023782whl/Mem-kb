@@ -107,7 +107,12 @@ export const env = {
     port: pickNumber(["DATABASE_PORT", "ZW_AI_DB_PORT"], 5432),
     user: pick(["DATABASE_USER", "ZW_AI_DB_USER"]) || undefined,
     password: pick(["DATABASE_PASSWORD", "ZW_AI_DB_PASSWORD"]) || undefined,
-    url: pick(["DATABASE_URL", "ZW_AI_DATABASE_URL"]) || undefined
+    url: pick(["DATABASE_URL", "ZW_AI_DATABASE_URL"]) || undefined,
+    poolMax: pickNumber(["DATABASE_POOL_MAX"], 12),
+    connectionTimeoutMs: pickNumber(["DATABASE_CONNECTION_TIMEOUT_MS"], 3_000),
+    idleTimeoutMs: pickNumber(["DATABASE_IDLE_TIMEOUT_MS"], 30_000),
+    statementTimeoutMs: pickNumber(["DATABASE_STATEMENT_TIMEOUT_MS"], 30_000),
+    lockTimeoutMs: pickNumber(["DATABASE_LOCK_TIMEOUT_MS"], 5_000)
   },
   redis: {
     host: pick(["REDIS_HOST", "ZW_AI_REDIS_HOST"], "127.0.0.1"),
@@ -120,7 +125,9 @@ export const env = {
     selected: defaultModel,
     models,
     configPath: modelConfigPath,
-    mode: pick(["AITEAM_MODEL_MODE"], "real")
+    mode: pick(["AITEAM_MODEL_MODE"], "real"),
+    secret: pick(["MODEL_SECRET", "AITEAM_MODEL_SECRET"], pick(["AUTH_SECRET", "AITEAM_AUTH_SECRET"], "aiteam-dev-secret-change-me")),
+    requestTimeoutMs: pickNumber(["MODEL_REQUEST_TIMEOUT_MS", "AITEAM_MODEL_REQUEST_TIMEOUT_MS"], 15 * 60_000)
   },
   gbrain: {
     baseUrl: pick(["GBRAIN_BASE_URL", "AITEAM_GBRAIN_BASE_URL"], "http://127.0.0.1:3131"),
@@ -162,12 +169,32 @@ export const env = {
     candidateLimit: pickNumber(["RETRIEVAL_CANDIDATE_LIMIT"], 30),
     rerankInputLimit: pickNumber(["RETRIEVAL_RERANK_INPUT_LIMIT"], 20),
     resultLimit: pickNumber(["RETRIEVAL_RESULT_LIMIT"], 10),
-    cacheTtlSeconds: pickNumber(["RETRIEVAL_CACHE_TTL_SECONDS"], 300)
+    cacheTtlSeconds: pickNumber(["RETRIEVAL_CACHE_TTL_SECONDS"], 300),
+    maxWorkspaceScope: pickNumber(["RETRIEVAL_MAX_WORKSPACES"], 8),
+    minSimilarityThreshold: pickNumber(["RETRIEVAL_MIN_SIMILARITY_THRESHOLD"], 0.7)
+  },
+  resilience: {
+    qaConcurrency: pickNumber(["QA_CONCURRENCY"], 12),
+    qaQueueLimit: pickNumber(["QA_QUEUE_LIMIT"], 24),
+    qaRequestsPerMinute: pickNumber(["QA_REQUESTS_PER_MINUTE"], 30),
+    providerConcurrency: pickNumber(["PROVIDER_CONCURRENCY"], 8),
+    providerQueueLimit: pickNumber(["PROVIDER_QUEUE_LIMIT"], 24),
+    retryBaseMs: pickNumber(["PROVIDER_RETRY_BASE_MS"], 200),
+    retryMaxMs: pickNumber(["PROVIDER_RETRY_MAX_MS"], 5_000),
+    breakerFailureThreshold: pickNumber(["PROVIDER_BREAKER_FAILURES"], 5),
+    breakerCooldownMs: pickNumber(["PROVIDER_BREAKER_COOLDOWN_MS"], 30_000)
   },
   channels: {
+    secret: pick(["CHANNEL_SECRET", "AITEAM_CHANNEL_SECRET"], pick(["AUTH_SECRET", "AITEAM_AUTH_SECRET"], "aiteam-dev-secret-change-me")),
     wechatBaseUrl: pick(["WECHAT_ILINK_BASE_URL"], "https://ilinkai.weixin.qq.com"),
     pollTimeoutMs: pickNumber(["WECHAT_ILINK_POLL_TIMEOUT_MS"], 40_000),
-    qrTtlSeconds: pickNumber(["WECHAT_ILINK_QR_TTL_SECONDS"], 120)
+    qrTtlSeconds: pickNumber(["WECHAT_ILINK_QR_TTL_SECONDS"], 120),
+    bindingLeaseSeconds: pickNumber(["CHANNEL_BINDING_LEASE_SECONDS"], 120),
+    processingLeaseSeconds: pickNumber(["CHANNEL_PROCESSING_LEASE_SECONDS"], 180),
+    syncIntervalMs: pickNumber(["CHANNEL_SYNC_INTERVAL_MS"], 15_000),
+    maxBindingsPerWorker: pickNumber(["CHANNEL_MAX_BINDINGS_PER_WORKER"], 50),
+    processingConcurrency: pickNumber(["CHANNEL_PROCESSING_CONCURRENCY"], 4),
+    processingQueueLimit: pickNumber(["CHANNEL_PROCESSING_QUEUE_LIMIT"], 20)
   },
   oss: {
     endpoint: pick(["OSS_ENDPOINT", "ZW_AI_OSS_ENDPOINT"]),
@@ -182,6 +209,15 @@ export const env = {
 if (env.runtime === "production") {
   if (!env.authSecret || env.authSecret === "aiteam-dev-secret-change-me" || env.authSecret.length < 32) {
     throw new Error("生产环境必须配置至少 32 位的 AUTH_SECRET，且不能使用默认密钥");
+  }
+  if (!env.model.secret || env.model.secret === "aiteam-dev-secret-change-me" || env.model.secret.length < 32) {
+    throw new Error("生产环境必须配置至少 32 位的 MODEL_SECRET，且不能使用默认密钥");
+  }
+  if (!env.channels.secret || env.channels.secret === "aiteam-dev-secret-change-me" || env.channels.secret.length < 32) {
+    throw new Error("生产环境必须配置至少 32 位的 CHANNEL_SECRET，且不能使用默认密钥");
+  }
+  if (env.model.secret === env.authSecret || env.channels.secret === env.authSecret || env.model.secret === env.channels.secret) {
+    throw new Error("生产环境的 AUTH_SECRET、MODEL_SECRET 与 CHANNEL_SECRET 必须相互独立");
   }
   if (!env.frontendOrigin.startsWith("https://") || !env.publicBaseUrl.startsWith("https://")) {
     throw new Error("生产环境的 FRONTEND_ORIGIN 与 PUBLIC_BASE_URL 必须使用 HTTPS");

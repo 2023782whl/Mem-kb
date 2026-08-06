@@ -39,23 +39,6 @@ export async function traceEvent(
   );
 }
 
-export async function attachTraceMessages(traceId: string, conversationId: string, userMessageId: string) {
-  await query(
-    `update qa_traces set conversation_id = $2, user_message_id = $3, updated_at = now() where id = $1`,
-    [traceId, conversationId, userMessageId]
-  );
-}
-
-export async function completeTrace(traceId: string, assistantMessageId: string, answer: string, citations: number, startedAt: number) {
-  await query(
-    `update qa_traces
-        set assistant_message_id = $2, answer_preview = $3, citation_count = $4,
-            status = 'completed', duration_ms = $5, completed_at = now(), updated_at = now()
-      where id = $1`,
-    [traceId, assistantMessageId, answer.slice(0, 800), citations, Date.now() - startedAt]
-  );
-}
-
 export async function failTrace(traceId: string, error: unknown, startedAt: number, issueType = "model") {
   const message = error instanceof Error ? error.message : String(error || "unknown_error");
   const status = issueType === "cancelled" ? "cancelled" : "failed";

@@ -38,6 +38,18 @@ export function toHttpErrorResponse(error: unknown, runtime: string): HttpErrorR
       log: false
     };
   }
+  if (err.statusCode === 503) {
+    const seconds = retryAfterSeconds(err.message);
+    return {
+      statusCode: 503,
+      body: {
+        error: "dependency_unavailable",
+        message: seconds ? `依赖服务暂不可用，请 ${seconds} 秒后重试` : "依赖服务暂不可用，请稍后重试",
+        retryAfterSeconds: seconds
+      },
+      log: false
+    };
+  }
   if (err.statusCode && err.statusCode >= 400 && err.statusCode < 500) {
     return {
       statusCode: err.statusCode,

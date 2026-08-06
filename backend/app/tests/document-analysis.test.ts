@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeDocumentAnalysis } from "../src/services/model.js";
+import { normalizeDocumentAnalysis, normalizeNoteOverview } from "../src/services/model.js";
 
 describe("normalizeDocumentAnalysis", () => {
   it("keeps a complete model summary and exactly five unique tags", () => {
@@ -27,5 +27,28 @@ describe("normalizeDocumentAnalysis", () => {
     expect(analysis.tags).toHaveLength(5);
     expect(new Set(analysis.tags).size).toBe(5);
     expect(analysis.tags.slice(0, 3)).toEqual(["关键词分析", "搜索人气", "支付转化率"]);
+  });
+});
+
+describe("normalizeNoteOverview", () => {
+  it("keeps model output grounded and fills three follow-up questions", () => {
+    const overview = normalizeNoteOverview({
+      summary: "围绕关键词研究建立标准流程，并以转化率和投入产出比持续复盘。",
+      keyPoints: ["建立原始词库", "按转化率筛选关键词"],
+      suggestedQuestions: ["如何建立原始词库？"]
+    }, "关键词分析 SOP", "# 关键词分析 SOP\n\n## 建立原始词库\n\n## 数据复盘", "zh-CN");
+
+    expect(overview.summary).toContain("关键词研究");
+    expect(overview.keyPoints).toContain("建立原始词库");
+    expect(overview.suggestedQuestions).toHaveLength(3);
+    expect(overview.suggestedQuestions[0]).toBe("如何建立原始词库？");
+  });
+
+  it("generates English fallback copy for the English interface", () => {
+    const overview = normalizeNoteOverview({}, "Launch plan", "# Launch plan\n\n## Audience strategy\nDefine the primary audience.\n\n## Measurement\nTrack conversion rate.", "en-US");
+
+    expect(overview.keyPoints).toContain("Audience strategy");
+    expect(overview.suggestedQuestions).toHaveLength(3);
+    expect(overview.suggestedQuestions.every((question) => question.endsWith("?"))).toBe(true);
   });
 });

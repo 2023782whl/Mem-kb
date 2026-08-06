@@ -1,6 +1,7 @@
 import { hashPassword } from "../auth/password.js";
 import { pool, one, query } from "./pool.js";
 import { createId } from "../utils/id.js";
+import { logger } from "../utils/logger.js";
 
 async function createAdmin() {
   const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
@@ -22,7 +23,7 @@ async function createAdmin() {
     [createId("user"), tenantId, email, name, hashPassword(password)]
   );
   if (!admin) throw new Error("管理员创建失败");
-  console.log(`Administrator ready: ${admin.email}`);
+  logger.info({ email: admin.email }, "Administrator ready");
 }
 
 if (/create-admin\.(ts|js)$/.test(process.argv[1] || "")) {

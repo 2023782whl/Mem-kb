@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileText, Folder, Image, MoreHorizontal, Plus, Search, Settings2 } from "lucide-react";
+import { FileText, Folder, Image, MoreHorizontal, Pin, Plus, Search, Settings2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Workspace } from "../../types/domain";
 import { FileTypeIcon } from "./FileTypeIcon";
@@ -15,13 +15,19 @@ function workspaceKind(workspace: Workspace): KnowledgeKind {
   return workspace.kind === "image" ? "image" : "document";
 }
 
-export function WorkspaceRail({ workspaces, activeId, kind, onSelect, onCreate, onManage }: {
+function supportsWorkspaceKind(workspace: Workspace, kind: KnowledgeKind) {
+  return workspace.kind === kind || workspace.kind === "mixed";
+}
+
+export function WorkspaceRail({ workspaces, activeId, kind, pinned, onSelect, onCreate, onManage, onTogglePinned }: {
   workspaces: Workspace[];
   activeId: string;
   kind: KnowledgeKind;
-  onSelect: (id: string) => void;
+  pinned: boolean;
+  onSelect: (id: string, options?: { keepPanelOpen?: boolean }) => void;
   onCreate: () => void;
   onManage: (workspace: Workspace | null) => void;
+  onTogglePinned: () => void;
 }) {
   const [, navigate] = useLocation();
   const active = workspaces.find((workspace) => workspace.id === activeId);
@@ -38,9 +44,12 @@ export function WorkspaceRail({ workspaces, activeId, kind, onSelect, onCreate, 
   }, [query, scope, workspaces]);
 
   function chooseScope(nextScope: Workspace["scope"]) {
+    if (nextScope === scope) return;
     setScope(nextScope);
-    const next = workspaces.find((workspace) => workspace.scope === nextScope && workspaceKind(workspace) === kind);
-    if (next) onSelect(next.id);
+    const next = workspaces.find((workspace) => workspace.scope === nextScope && supportsWorkspaceKind(workspace, kind));
+    // A scope switch is a browsing action: keep the temporary rail open so its
+    // contents do not disappear at the same time as the active workspace changes.
+    if (next && next.id !== activeId) onSelect(next.id, { keepPanelOpen: true });
   }
 
   function chooseWorkspace(workspace: Workspace) {
@@ -68,7 +77,11 @@ export function WorkspaceRail({ workspaces, activeId, kind, onSelect, onCreate, 
     <aside className="workspace-rail">
       <header className="workspace-rail-head">
         <div><span>知识中心</span><strong>知识空间</strong></div>
-        <span className="workspace-rail-tools"><button className="icon-button" onClick={() => onManage(null)} title="管理 Workspace"><Settings2 size={17} /></button><button className="icon-button" onClick={onCreate} title={`新建${kind === "document" ? "文档" : "图片"} Workspace`}><Plus size={18} /></button></span>
+        <span className="workspace-rail-tools panel-header-actions">
+          <button className={`icon-button panel-pin-button ${pinned ? "active" : ""}`} onClick={onTogglePinned} title={pinned ? "取消固定知识空间" : "固定知识空间"} aria-pressed={pinned}><Pin size={15} fill={pinned ? "currentColor" : "none"} /></button>
+          <button className="icon-button" onClick={() => onManage(null)} title="管理 Workspace"><Settings2 size={17} /></button>
+          <button className="icon-button workspace-create-button" onClick={onCreate} title={`新建${kind === "document" ? "文档" : "图片"} Workspace`}><Plus size={18} /></button>
+        </span>
       </header>
 
       <div className="workspace-scope-switch" aria-label="Workspace 范围">

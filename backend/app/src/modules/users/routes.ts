@@ -1,13 +1,21 @@
+import fs from "node:fs";
 import type { FastifyInstance } from "fastify";
+import sharp from "sharp";
 import { z } from "zod";
-import { audit, requireAdmin, toPublicUser } from "../../auth/context.js";
+import { audit, requireAdmin, requireUser, toPublicUser } from "../../auth/context.js";
 import { hashPassword } from "../../auth/password.js";
 import { one, query } from "../../db/pool.js";
 import type { User, UserRole } from "../../db/schema.js";
 import { createId } from "../../utils/id.js";
+import { ensureStoredFile, removeStoredFile, writeStoredBuffer } from "../../services/storage.js";
 
 const roleSchema = z.enum(["admin", "editor", "viewer"]);
 const statusSchema = z.enum(["active", "disabled"]);
+const avatarPresetIds = ["indigo", "jade", "sunset", "ocean", "plum", "citrus", "slate", "rose"] as const;
+const avatarPreferenceSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("initials") }),
+  z.object({ type: z.literal("preset"), value: z.enum(avatarPresetIds) })
+]);
 
 const createUserSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -29,7 +37,7 @@ type ManagedUser = Omit<User, "password_hash"> & { resource_count: number };
 
 async function listUsers(tenantId: string) {
   return query<ManagedUser>(
-    `select u.id, u.tenant_id, u.email, u.name, u.role, u.is_admin, u.status, u.created_at,
+    `select u.id, u.tenant_id, u.email, u.name, u.role, u.is_admin, u.status, u.avatar_type, u.avatar_value, u.created_at,
             ((select count(*) from workspaces w where w.owner_id = u.id) +
              (select count(*) from notes n where n.owner_id = u.id) +
              (select count(*) from assets a where a.owner_id = u.id))::int as resource_count
@@ -38,6 +46,17 @@ async function listUsers(tenantId: string) {
       order by case u.role when 'admin' then 0 when 'editor' then 1 else 2 end, u.created_at`,
     [tenantId]
   );
+}
+
+async function replaceAvatar(user: User, type: User["avatar_type"], value: string | null) {
+  const updated = await one<User>(
+    `update users set avatar_type = $1, avatar_value = $2 where id = $3 and tenant_id = $4 returning *`,
+    [type, value, user.id, user.tenant_id]
+  );
+  if (user.avatar_type === "upload" && user.avatar_value && user.avatar_value !== value && user.avatar_value.startsWith(`avatars/${user.tenant_id}/${user.id}/`)) {
+    await removeStoredFile(user.avatar_value).catch(() => undefined);
+  }
+  return updated;
 }
 
 async function activeAdminCount(tenantId: string) {
@@ -53,6 +72,72 @@ function duplicateEmail(error: unknown) {
 }
 
 export async function registerUserRoutes(app: FastifyInstance) {
+  app.get("/api/users/:id/avatar", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const { id } = request.params as { id: string };
+    const target = await one<Pick<User, "avatar_type" | "avatar_value">>(
+      `select avatar_type, avatar_value from users where id = $1 and tenant_id = $2`,
+      [id, user.tenant_id]
+    );
+    if (!target || target.avatar_type !== "upload" || !target.avatar_value) {
+      return reply.code(404).send({ error: "avatar_not_found", message: "头像不存在" });
+    }
+    const absolutePath = await ensureStoredFile(target.avatar_value).catch(() => "");
+    if (!absolutePath) return reply.code(404).send({ error: "avatar_not_found", message: "头像文件不存在" });
+    reply.header("cache-control", "private, max-age=86400");
+    reply.type("image/webp");
+    return reply.send(fs.createReadStream(absolutePath));
+  });
+
+  app.post("/api/me/avatar", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const file = await request.file({ limits: { fileSize: 5 * 1024 * 1024 } });
+    if (!file) return reply.code(400).send({ error: "missing_avatar", message: "请选择头像图片" });
+    if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.mimetype)) {
+      file.file.resume();
+      return reply.code(415).send({ error: "invalid_avatar_type", message: "头像仅支持 JPG、PNG 或 WebP" });
+    }
+    const bytes = await file.toBuffer();
+    if (file.file.truncated || bytes.length > 5 * 1024 * 1024) return reply.code(413).send({ error: "avatar_too_large", message: "头像文件不能超过 5MB" });
+    let output: Buffer;
+    try {
+      const metadata = await sharp(bytes).metadata();
+      if (!metadata.width || !metadata.height || metadata.width < 64 || metadata.height < 64) {
+        return reply.code(400).send({ error: "avatar_too_small", message: "头像尺寸不能小于 64×64" });
+      }
+      output = await sharp(bytes).rotate().resize(512, 512, { fit: "cover", position: "centre" }).webp({ quality: 86 }).toBuffer();
+    } catch {
+      return reply.code(415).send({ error: "invalid_avatar", message: "无法读取头像图片" });
+    }
+    const storageKey = `avatars/${user.tenant_id}/${user.id}/${createId("avatar")}.webp`;
+    await writeStoredBuffer(storageKey, output);
+    const updated = await replaceAvatar(user, "upload", storageKey);
+    if (!updated) throw new Error("头像保存失败");
+    await audit(user, "user.avatar.upload", "user", user.id);
+    return { user: toPublicUser(updated) };
+  });
+
+  app.patch("/api/me/avatar", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const body = avatarPreferenceSchema.parse(request.body);
+    const updated = await replaceAvatar(user, body.type, body.type === "preset" ? body.value : null);
+    if (!updated) throw new Error("头像保存失败");
+    await audit(user, "user.avatar.preference", "user", user.id, body);
+    return { user: toPublicUser(updated) };
+  });
+
+  app.delete("/api/me/avatar", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const updated = await replaceAvatar(user, "initials", null);
+    if (!updated) throw new Error("头像重置失败");
+    await audit(user, "user.avatar.reset", "user", user.id);
+    return { user: toPublicUser(updated) };
+  });
+
   app.get("/api/users", async (request, reply) => {
     const admin = await requireAdmin(request, reply);
     if (!admin) return;

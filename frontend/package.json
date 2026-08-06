@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 5178",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
+    "i18n:check": "node scripts/check-i18n.cjs",
     "preview": "vite preview --host 127.0.0.1 --port 4178",
     "test": "vitest run",
     "test:e2e": "playwright test"

@@ -1,11 +1,15 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import pg from "pg";
 import { env } from "../config/env.js";
+import { dbAcquireDuration, dbTransactionDuration, updateDbPoolMetrics } from "../observability/registry.js";
+import { logger } from "../utils/logger.js";
 
 const { Pool } = pg;
 
-export const pool = new Pool(
-  env.database.url
+const SLOW_QUERY_THRESHOLD_MS = Number(process.env.SLOW_QUERY_THRESHOLD_MS || 1000);
+
+export const pool = new Pool({
+  ...(env.database.url
     ? { connectionString: env.database.url }
     : {
         host: env.database.host,
@@ -13,8 +17,26 @@ export const pool = new Pool(
         database: env.database.name,
         user: env.database.user,
         password: env.database.password
-      }
-);
+      }),
+  max: env.database.poolMax,
+  connectionTimeoutMillis: env.database.connectionTimeoutMs,
+  idleTimeoutMillis: env.database.idleTimeoutMs,
+  allowExitOnIdle: false
+});
+
+function poolMetrics() {
+  updateDbPoolMetrics({ total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount });
+}
+
+async function connect() {
+  const startedAt = process.hrtime.bigint();
+  try {
+    return await pool.connect();
+  } finally {
+    dbAcquireDuration.observe(Number(process.hrtime.bigint() - startedAt) / 1e9);
+    poolMetrics();
+  }
+}
 
 interface DbContext {
   system: boolean;
@@ -56,13 +78,24 @@ async function applyContext(client: pg.PoolClient) {
   await client.query(
     `select set_config('app.system', $1, true),
             set_config('app.tenant_id', $2, true),
-            set_config('app.user_id', $3, true)`,
-    [context.system ? "true" : "false", context.tenantId || "", context.userId || ""]
+            set_config('app.user_id', $3, true),
+            set_config('statement_timeout', $4, true),
+            set_config('lock_timeout', $5, true),
+            set_config('hnsw.iterative_scan', 'relaxed_order', true)`,
+    [
+      context.system ? "true" : "false",
+      context.tenantId || "",
+      context.userId || "",
+      `${env.database.statementTimeoutMs}ms`,
+      `${env.database.lockTimeoutMs}ms`
+    ]
   );
 }
 
 export async function query<T = Record<string, unknown>>(text: string, params: unknown[] = []) {
-  const client = await pool.connect();
+  const client = await connect();
+  const startedAt = process.hrtime.bigint();
+  let outcome = "success";
   try {
     await client.query("begin");
     await applyContext(client);
@@ -70,10 +103,28 @@ export async function query<T = Record<string, unknown>>(text: string, params: u
     await client.query("commit");
     return result.rows as T[];
   } catch (error) {
+    outcome = "error";
     await client.query("rollback");
     throw error;
   } finally {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    dbTransactionDuration.observe({ outcome }, durationMs / 1000);
+
+    // 慢查询日志
+    if (durationMs > SLOW_QUERY_THRESHOLD_MS) {
+      const context = activeContext();
+      logger.warn({
+        durationMs: Math.round(durationMs),
+        query: text.slice(0, 500),
+        paramCount: params.length,
+        tenantId: context.tenantId,
+        userId: context.userId,
+        outcome
+      }, "Slow query detected");
+    }
+
     client.release();
+    poolMetrics();
   }
 }
 
@@ -83,7 +134,9 @@ export async function one<T = Record<string, unknown>>(text: string, params: unk
 }
 
 export async function tx<T>(fn: (client: pg.PoolClient) => Promise<T>) {
-  const client = await pool.connect();
+  const client = await connect();
+  const startedAt = process.hrtime.bigint();
+  let outcome = "success";
   try {
     await client.query("begin");
     await applyContext(client);
@@ -91,9 +144,26 @@ export async function tx<T>(fn: (client: pg.PoolClient) => Promise<T>) {
     await client.query("commit");
     return value;
   } catch (error) {
+    outcome = "error";
     await client.query("rollback");
     throw error;
   } finally {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    dbTransactionDuration.observe({ outcome }, durationMs / 1000);
+
+    // 慢事务日志
+    if (durationMs > SLOW_QUERY_THRESHOLD_MS) {
+      const context = activeContext();
+      logger.warn({
+        durationMs: Math.round(durationMs),
+        type: "transaction",
+        tenantId: context.tenantId,
+        userId: context.userId,
+        outcome
+      }, "Slow transaction detected");
+    }
+
     client.release();
+    poolMetrics();
   }
 }

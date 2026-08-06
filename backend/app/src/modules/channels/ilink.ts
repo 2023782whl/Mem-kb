@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 
 const CHANNEL_VERSION = "1.0.0";
 const TEXT_LIMIT = 2_000;
@@ -131,6 +132,65 @@ export class WechatILinkClient {
     }, true, 20_000);
   }
 
+  async sendImage(toUserId: string, contextToken: string, filePath: string, clientId: string) {
+    const plaintext = await fs.readFile(filePath);
+    const aesKey = crypto.randomBytes(16);
+    const fileKey = crypto.randomBytes(16).toString("hex");
+    const cipher = crypto.createCipheriv("aes-128-ecb", aesKey, null);
+    cipher.setAutoPadding(true);
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const upload = await this.request("/ilink/bot/getuploadurl", {
+      method: "POST",
+      body: JSON.stringify({
+        filekey: fileKey,
+        media_type: 1,
+        to_user_id: toUserId,
+        rawsize: plaintext.length,
+        rawfilemd5: crypto.createHash("md5").update(plaintext).digest("hex"),
+        filesize: ciphertext.length,
+        no_need_thumb: true,
+        aeskey: aesKey.toString("hex"),
+        base_info: { channel_version: CHANNEL_VERSION }
+      })
+    }, true, 20_000);
+    const directUrl = String(upload.upload_full_url || "");
+    const uploadParam = String(upload.upload_param || "");
+    const uploadUrl = directUrl || (uploadParam
+      ? `https://novac2c.cdn.weixin.qq.com/c2c/upload?encrypted_query_param=${encodeURIComponent(uploadParam)}&filekey=${encodeURIComponent(fileKey)}`
+      : "");
+    if (!uploadUrl || !isTrustedWechatUrl(uploadUrl)) throw new Error("微信图片上传地址无效");
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: ciphertext,
+      signal: AbortSignal.timeout(60_000)
+    });
+    const encryptedParam = response.headers.get("x-encrypted-param");
+    if (!response.ok || !encryptedParam) throw new Error(`微信图片上传失败：${response.status}`);
+    const aesKeyForApi = Buffer.from(aesKey.toString("hex"), "ascii").toString("base64");
+    return this.request("/ilink/bot/sendmessage", {
+      method: "POST",
+      body: JSON.stringify({
+        msg: {
+          from_user_id: "",
+          to_user_id: toUserId,
+          client_id: clientId,
+          message_type: 2,
+          message_state: 2,
+          context_token: contextToken,
+          item_list: [{
+            type: 2,
+            image_item: {
+              media: { encrypt_query_param: encryptedParam, aes_key: aesKeyForApi, encrypt_type: 1 },
+              mid_size: ciphertext.length
+            }
+          }]
+        },
+        base_info: { channel_version: CHANNEL_VERSION }
+      })
+    }, true, 20_000);
+  }
+
   private async request(path: string, init: RequestInit, authenticated: boolean, timeoutMs: number) {
     const response = await fetch(`${this.baseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
@@ -150,6 +210,15 @@ export class WechatILinkClient {
     const errcode = Number(payload.errcode || payload.ret || 0);
     if (errcode) throw new Error(`微信 iLink 错误 ${errcode}：${String(payload.errmsg || "")}`);
     return payload;
+  }
+}
+
+function isTrustedWechatUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && validateWechatHost(url.hostname);
+  } catch {
+    return false;
   }
 }
 

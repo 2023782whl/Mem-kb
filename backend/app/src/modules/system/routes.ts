@@ -1,11 +1,23 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "../../config/env.js";
 import { gbrainHealth } from "../../services/gbrain.js";
-import { modelCatalog } from "../../services/model.js";
+import { modelCatalog } from "../models/runtime.js";
 import { assetQueueCounts } from "../../services/asset-queue.js";
+import { maintenanceQueueCounts } from "../../services/maintenance-queue.js";
 import { query } from "../../db/pool.js";
 
 export async function registerSystemRoutes(app: FastifyInstance) {
+  app.get("/api/live", async () => ({ ok: true, name: "mem-kb-api", time: new Date().toISOString() }));
+
+  app.get("/api/ready", async (_request, reply) => {
+    try {
+      await query(`select 1 as ok`);
+      return { ok: true, name: "mem-kb-api", time: new Date().toISOString() };
+    } catch {
+      return reply.code(503).send({ ok: false, name: "mem-kb-api", time: new Date().toISOString() });
+    }
+  });
+
   app.get("/api/health", async (_request, reply) => {
     let database: Record<string, unknown>;
     try {
@@ -22,7 +34,8 @@ export async function registerSystemRoutes(app: FastifyInstance) {
     }
     let queue: Record<string, unknown>;
     try {
-      queue = { ok: true, ...(await assetQueueCounts()) };
+      const [asset, maintenance] = await Promise.all([assetQueueCounts(), maintenanceQueueCounts()]);
+      queue = { ok: true, asset, maintenance };
     } catch (error) {
       queue = { ok: false, error: error instanceof Error ? error.message : "Redis 队列不可用" };
     }
@@ -34,9 +47,8 @@ export async function registerSystemRoutes(app: FastifyInstance) {
       database,
       gbrain,
       queue,
-      models: modelCatalog()
+      models: await modelCatalog().catch(() => [])
     });
   });
 
-  app.get("/api/models", async () => ({ models: modelCatalog() }));
 }

@@ -6,6 +6,8 @@ export interface User {
   role: "admin" | "editor" | "viewer";
   is_admin: boolean;
   status: "active" | "disabled";
+  avatar_type?: "initials" | "preset" | "upload";
+  avatar_value?: string | null;
   created_at: string;
   resource_count?: number;
 }
@@ -75,6 +77,7 @@ export interface Conversation {
   user_id: string;
   title: string;
   workspace_id: string;
+  workspace_ids: string[];
   model_id: string;
   created_at: string;
   updated_at: string;
@@ -92,6 +95,7 @@ export interface Message {
 export interface Citation {
   id?: string;
   message_id?: string;
+  workspaceId?: string | null;
   title: string;
   snippet: string;
   slug?: string | null;
@@ -299,6 +303,56 @@ export interface ModelInfo {
   iconUrl?: string;
   configured: boolean;
   supportsVision: boolean;
+  maxTokens?: number;
+  capabilities?: string[];
+  source?: "static" | "tenant";
+  apiProtocol?: ModelProtocol;
+  enabled?: boolean;
+  isDefault?: boolean;
+  verificationStatus?: ModelVerificationStatus;
+  verificationError?: string | null;
+  configurable?: boolean;
+}
+
+export type ModelProtocol = "openai_chat_completions" | "anthropic_messages" | "gemini_generate_content";
+export type ModelVerificationStatus = "unverified" | "verifying" | "verified" | "failed";
+
+export interface ModelConfig {
+  id: string;
+  tenant_id: string;
+  name: string;
+  kind: "LLM" | "IMAGE";
+  api_protocol: ModelProtocol;
+  base_url: string;
+  model_name: string;
+  temperature: number;
+  max_tokens: number;
+  supports_vision: boolean;
+  capabilities: string[];
+  extra_body: Record<string, unknown>;
+  enabled: boolean;
+  is_default: boolean;
+  verification_status: ModelVerificationStatus;
+  verification_error: string | null;
+  hasApiKey: boolean;
+  apiKeyMasked: string;
+  verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModelConfigInput {
+  name: string;
+  kind: "LLM" | "IMAGE";
+  apiProtocol: ModelProtocol;
+  baseUrl: string;
+  modelName: string;
+  apiKey?: string;
+  temperature: number;
+  maxTokens: number;
+  supportsVision: boolean;
+  capabilities: string[];
+  extraBody: Record<string, unknown>;
 }
 
 export interface InsightItem {
@@ -410,6 +464,12 @@ export interface NoteAssistantSource {
   heading: string;
   snippet: string;
   score: number;
+}
+
+export interface NoteOverview {
+  summary: string;
+  keyPoints: string[];
+  suggestedQuestions: string[];
 }
 
 export type GBrainObject = Record<string, unknown>;

@@ -142,6 +142,8 @@ mem-kb/
 | 变量 | 用途 |
 | --- | --- |
 | `AUTH_SECRET` | 会话签名密钥，生产环境至少 32 位 |
+| `MODEL_SECRET` | 租户模型密钥的服务端加密主密钥，生产环境至少 32 位 |
+| `CHANNEL_SECRET` | 微信上下文凭证的服务端加密主密钥，生产环境至少 32 位 |
 | `DATABASE_URL` | PostgreSQL 连接串；也可分别配置 host/user/password |
 | `REDIS_HOST` / `REDIS_PORT` | 队列与任务调度 |
 | `MODEL_BASE_URL` | OpenAI-compatible 模型网关 |

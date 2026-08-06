@@ -62,6 +62,7 @@ describe("AssetWorkbench", () => {
     expect(screen.getByRole("button", { name: "预览" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Markdown 原文" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑文档" })).not.toBeInTheDocument();
-    expect(container.querySelector(".workbench-actions")).toBeInTheDocument();
+    expect(container.querySelector(".workbench-toolbar-row")).toBeInTheDocument();
+    expect(container.querySelector(".workbench-utility-actions")).toBeInTheDocument();
   });
 });

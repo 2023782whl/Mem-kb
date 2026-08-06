@@ -1,6 +1,6 @@
 import { BookMarked, Bot, Check, ChevronDown, Copy, FileImage, FileText, GitBranch, Globe2, Search, ThumbsDown, ThumbsUp } from "lucide-react";
 import { MarkdownContent } from "../../shared/MarkdownContent";
-import { LoadingDots } from "../../shared/LoadingSystem";
+import { AssistantGenerationStatus } from "../../shared/AssistantExperience";
 import type { Citation, ConversationMessage } from "../../types/domain";
 
 export function MessageThread({ messages, modelName, workspaceName, onFeedback, onBranch, onCapture, onRetry }: {
@@ -19,9 +19,10 @@ export function MessageThread({ messages, modelName, workspaceName, onFeedback, 
         : <article className="assistant-message" key={message.id}>
           <header><span className="assistant-avatar"><Bot size={17} /></span><strong>Mem-kb</strong>{message.status === "streaming" ? <em>生成中</em> : message.status === "stopped" ? <em>已停止</em> : message.status === "error" ? <em className="error">未完成</em> : null}</header>
           <SourceList message={message} />
+          {message.status === "streaming" ? <AssistantGenerationStatus startedAt={Date.parse(message.created_at) || Date.now()} compact={Boolean(message.content)} /> : null}
           {message.content
             ? <MarkdownContent source={message.content} className="message-markdown" citationCount={message.citations.length} citationPrefix={`${message.id}-citation`} />
-            : message.status === "streaming" ? <div className="assistant-thinking"><LoadingDots />正在检索企业知识并组织答案</div> : null}
+            : null}
           {message.error ? <div className="message-error"><span>{message.error}</span><button onClick={() => onRetry(index)}>重试</button></div> : null}
           {message.content ? <footer className="message-actions">
             <span>{modelName(message.model_id)} · {workspaceName}</span>

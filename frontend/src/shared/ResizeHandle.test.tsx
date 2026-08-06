@@ -15,4 +15,15 @@ describe("ResizeHandle", () => {
     expect(onDelta).toHaveBeenNthCalledWith(2, -16);
     expect(onReset).toHaveBeenCalledOnce();
   });
+
+  it("keeps dragging after the pointer leaves the visible divider", () => {
+    const onDelta = vi.fn();
+    render(<ResizeHandle label="调整图谱宽度" onDelta={onDelta} onReset={vi.fn()} />);
+    const handle = screen.getByRole("separator", { name: "调整图谱宽度" });
+    Object.assign(handle, { setPointerCapture: vi.fn(), hasPointerCapture: () => true, releasePointerCapture: vi.fn() });
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 7, clientX: 640 });
+    fireEvent.pointerMove(handle, { pointerId: 7, clientX: 500 });
+    fireEvent.pointerUp(handle, { pointerId: 7, clientX: 500 });
+    expect(onDelta).toHaveBeenCalledWith(-140);
+  });
 });

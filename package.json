@@ -24,6 +24,7 @@
     "test": "npm --prefix backend/app run test && npm --prefix frontend run test",
     "test:e2e": "npm --prefix frontend run test:e2e",
     "test:regression": "npm --prefix backend/app run test:regression",
+    "test:load": "node scripts/load-smoke.mjs",
     "audit": "npm --prefix backend/app audit --audit-level=high && npm --prefix frontend audit --audit-level=high",
     "check": "npm run typecheck && npm test && npm run build"
   }

@@ -13,6 +13,8 @@ export interface User {
   role: UserRole;
   is_admin: boolean;
   status: "active" | "disabled";
+  avatar_type: "initials" | "preset" | "upload";
+  avatar_value: string | null;
   created_at: string;
 }
 
@@ -96,6 +98,7 @@ export interface Conversation {
   id: string;
   tenant_id: string;
   workspace_id: string;
+  workspace_ids: string[];
   user_id: string;
   title: string;
   model_id: string;
@@ -160,6 +163,8 @@ export interface RagEvaluationRun {
   accuracy: number;
   citation_correctness: number;
   error: string | null;
+  lease_owner: string | null;
+  lease_expires_at: string | null;
   started_at: string;
   completed_at: string | null;
   created_at: string;
@@ -205,6 +210,8 @@ export interface ChannelBinding {
   connected: boolean;
   credentials_enc: string | null;
   config: Record<string, unknown>;
+  lease_owner: string | null;
+  lease_expires_at: string | null;
   last_connected_at: string | null;
   created_at: string;
   updated_at: string;
@@ -213,6 +220,7 @@ export interface ChannelBinding {
 export interface Citation {
   id: string;
   message_id: string;
+  workspace_id: string | null;
   asset_id: string | null;
   gbrain_slug: string | null;
   title: string;

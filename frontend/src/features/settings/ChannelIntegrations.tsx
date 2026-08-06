@@ -6,6 +6,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { ChannelBinding, ChannelDelivery, ChannelIdentity, ChannelMessage, User, Workspace } from "../../types/domain";
+import { useI18n, type AppLocale } from "../../i18n";
 
 type DetailTab = "scope" | "identities" | "messages" | "deliveries";
 type QrSession = { code: string; image: string; expiresAt: string; status: string };
@@ -19,9 +20,12 @@ export function ChannelIntegrations() {
   const [createScope, setCreateScope] = useState<string[]>([]);
   const [autoScanId, setAutoScanId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const [channelResult, workspaceResult, userResult] = await Promise.all([api.channels(), api.workspaces(), api.users()]);
       setBindings(channelResult.bindings);
@@ -30,13 +34,15 @@ export function ChannelIntegrations() {
       setActiveId((current) => channelResult.bindings.some((item) => item.id === current) ? current : channelResult.bindings[0]?.id || "");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "渠道信息加载失败");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
   async function createBinding() {
-    if (!createScope.length || busy) return;
+    if (!createScope.length || busy || loading) return;
     setBusy(true);
     setError("");
     try {
@@ -70,7 +76,7 @@ export function ChannelIntegrations() {
         onChanged={load}
       /> : null}
     </div>}
-    {createOpen ? <div className="modal-backdrop"><section className="channel-create-dialog" role="dialog" aria-modal="true" aria-label="接入微信"><header><div><QrCode size={18} /><span><strong>接入个人微信</strong><em>选择微信可以调用的知识库</em></span></div><button onClick={() => setCreateOpen(false)} aria-label="关闭"><X /></button></header><WorkspaceChecks workspaces={workspaces} value={createScope} onChange={setCreateScope} /><footer><button className="button compact" onClick={() => setCreateOpen(false)}>取消</button><button className="button primary compact" disabled={!createScope.length || busy} onClick={createBinding}>{busy ? "创建中" : "创建并扫码"}</button></footer></section></div> : null}
+    {createOpen ? <div className="modal-backdrop"><section className="channel-create-dialog" role="dialog" aria-modal="true" aria-label="接入微信"><header><div><QrCode size={18} /><span><strong>接入个人微信</strong><em>选择微信可以调用的知识库</em></span></div><button onClick={() => setCreateOpen(false)} aria-label="关闭"><X /></button></header>{loading ? <DialogState label="正在加载可授权的知识库…" /> : workspaces.length ? <WorkspaceChecks workspaces={workspaces} value={createScope} onChange={setCreateScope} /> : <DialogState label={error || "当前没有可授权的知识库"} onRetry={() => void load()} />}{error && workspaces.length ? <p className="channel-dialog-error" role="alert">{error}</p> : null}<footer><button className="button compact" onClick={() => setCreateOpen(false)}>取消</button><button className="button primary compact" disabled={!createScope.length || busy || loading} onClick={createBinding}>{busy ? "创建中" : "创建并扫码"}</button></footer></section></div> : null}
   </div>;
 }
 
@@ -82,6 +88,7 @@ function ChannelDetail({ binding, workspaces, users, autoScan, onAutoScan, onCha
   onAutoScan: () => void;
   onChanged: () => Promise<void>;
 }) {
+  const { locale } = useI18n();
   const [tab, setTab] = useState<DetailTab>("scope");
   const [scope, setScope] = useState(binding.workspace_ids);
   const [qr, setQr] = useState<QrSession | null>(null);
@@ -182,19 +189,23 @@ function ChannelDetail({ binding, workspaces, users, autoScan, onAutoScan, onCha
 
   const needsScan = binding.status !== "active" || !binding.connected;
   return <section className="channel-detail">
-    <header><div><MessageCircle size={20} /><span><strong>个人微信</strong><em>创建于 {formatTime(binding.created_at)}</em></span><ChannelStatus binding={binding} /></div><div className="channel-header-actions">{needsScan ? <button className="button primary compact" disabled={busy} onClick={() => void startQr()}><QrCode size={14} />{busy ? "获取中" : "扫码接入"}</button> : <button className="button compact danger-outline" disabled={busy} onClick={disconnect}><Unplug size={14} />断开接入</button>}<button className="button compact danger-outline" disabled={busy} onClick={remove}><Trash2 size={14} />删除</button></div></header>
+    <header><div><MessageCircle size={20} /><span><strong>个人微信</strong><em>创建于 {formatTime(binding.created_at, locale)}</em></span><ChannelStatus binding={binding} /></div><div className="channel-header-actions">{needsScan ? <button className="button primary compact" disabled={busy} onClick={() => void startQr()}><QrCode size={14} />{busy ? "获取中" : "扫码接入"}</button> : <button className="button compact danger-outline" disabled={busy} onClick={disconnect}><Unplug size={14} />断开接入</button>}<button className="button compact danger-outline" disabled={busy} onClick={remove}><Trash2 size={14} />删除</button></div></header>
     {error ? <div className="inline-notice">{error}</div> : null}
     {qr ? <div className="wechat-qr-panel"><img src={qr.image} alt="微信接入二维码" /><strong>{qrHint(qr.status)}</strong><span>二维码到期后自动刷新 · {formatCountdown(qr.expiresAt)}</span>{qr.status === "need_verifycode" ? <label>手机显示的数字<input value={verifyCode} onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" /></label> : null}<button className="text-button" onClick={() => void startQr()}><RefreshCw size={13} />刷新二维码</button></div> : null}
     <nav className="channel-tabs">{(["scope", "identities", "messages", "deliveries"] as DetailTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{detailTabLabel(item)}</button>)}</nav>
     {tab === "scope" ? <div className="channel-panel"><div className="panel-heading"><div><strong>知识库召回范围</strong><span>微信消息只能检索勾选范围，服务端逐项校验权限。</span></div><button className="button compact" disabled={busy || !scope.length} onClick={saveScope}>保存范围</button></div><WorkspaceChecks workspaces={workspaces} value={scope} onChange={setScope} /></div> : null}
     {tab === "identities" ? <div className="channel-panel"><div className="panel-heading"><div><strong>微信身份绑定</strong><span>未绑定身份默认使用渠道创建者权限。</span></div></div><div className="channel-data-list">{identities.map((identity) => <div key={identity.id}><span className="data-icon"><UsersRound /></span><span><strong>{identity.display_name || identity.external_user_id}</strong><em>{identity.is_group ? "群聊成员" : "私聊用户"} · {identity.external_user_id}</em></span><select value={identity.user_id || ""} onChange={async (event) => { await api.bindChannelIdentity(binding.id, identity.id, event.target.value || null); setIdentities((current) => current.map((item) => item.id === identity.id ? { ...item, user_id: event.target.value || null } : item)); }}><option value="">使用创建者</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}</select></div>)}{!identities.length ? <EmptyRow label="收到微信消息后会在这里生成身份。" /> : null}</div></div> : null}
-    {tab === "messages" ? <LogList rows={messages.map((item) => ({ id: item.id, icon: item.direction === "inbound" ? <MessageCircle /> : <Send />, title: item.direction === "inbound" ? "收到消息" : "发送回复", content: item.content, meta: `${item.is_group ? "群聊" : "私聊"} · ${item.status} · ${formatTime(item.created_at)}`, error: item.error }))} empty="暂无微信消息" /> : null}
-    {tab === "deliveries" ? <LogList rows={deliveries.map((item) => ({ id: item.id, icon: item.status === "delivered" ? <CheckCircle2 /> : <Send />, title: item.status === "delivered" ? "投递成功" : `投递${item.status}`, content: item.external_conversation_id, meta: `${item.attempts} 次尝试 · ${formatTime(item.created_at)}`, error: item.last_error }))} empty="暂无投递日志" /> : null}
+    {tab === "messages" ? <LogList rows={messages.map((item) => ({ id: item.id, icon: item.direction === "inbound" ? <MessageCircle /> : <Send />, title: item.direction === "inbound" ? "收到消息" : "发送回复", content: item.content, meta: `${item.is_group ? "群聊" : "私聊"} · ${item.status} · ${formatTime(item.created_at, locale)}`, error: item.error }))} empty="暂无微信消息" /> : null}
+    {tab === "deliveries" ? <LogList rows={deliveries.map((item) => ({ id: item.id, icon: item.status === "delivered" ? <CheckCircle2 /> : <Send />, title: item.status === "delivered" ? "投递成功" : `投递${item.status}`, content: item.external_conversation_id, meta: `${item.attempts} 次尝试 · ${formatTime(item.created_at, locale)}`, error: item.last_error }))} empty="暂无投递日志" /> : null}
   </section>;
 }
 
 function WorkspaceChecks({ workspaces, value, onChange }: { workspaces: Workspace[]; value: string[]; onChange: (value: string[]) => void }) {
   return <div className="workspace-check-grid">{workspaces.map((workspace) => <label key={workspace.id}><input type="checkbox" checked={value.includes(workspace.id)} onChange={(event) => onChange(event.target.checked ? [...value, workspace.id] : value.filter((id) => id !== workspace.id))} /><span><strong>{workspace.name}</strong><em>{workspace.scope === "personal" ? "个人知识" : "团队知识"} · {workspace.asset_count || 0} 项资产</em></span></label>)}</div>;
+}
+
+function DialogState({ label, onRetry }: { label: string; onRetry?: () => void }) {
+  return <div className="channel-dialog-state"><span>{label}</span>{onRetry ? <button className="text-button" onClick={onRetry}><RefreshCw size={13} />重新加载</button> : null}</div>;
 }
 
 function ChannelStatus({ binding }: { binding: ChannelBinding }) {
@@ -209,5 +220,5 @@ function LogList({ rows, empty }: { rows: Array<{ id: string; icon: React.ReactN
 function EmptyRow({ label }: { label: string }) { return <div className="channel-log-empty"><ShieldCheck size={22} /><span>{label}</span></div>; }
 function detailTabLabel(tab: DetailTab) { return ({ scope: "知识库", identities: "身份绑定", messages: "消息记录", deliveries: "投递日志" })[tab]; }
 function qrHint(status: string) { return status === "scaned" || status === "scaned_but_redirect" ? "已扫码，请在手机确认" : status === "need_verifycode" ? "请输入手机显示的数字" : "使用微信扫描二维码"; }
-function formatTime(value: string) { return new Date(value).toLocaleString("zh-CN", { hour12: false }); }
+function formatTime(value: string, locale: AppLocale) { return new Date(value).toLocaleString(locale, { hour12: false }); }
 function formatCountdown(expiresAt: string) { return Date.parse(expiresAt) > Date.now() ? "约 2 分钟有效" : "正在刷新"; }

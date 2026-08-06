@@ -1,6 +1,7 @@
 import { pool, query } from "./pool.js";
 import type { Asset } from "./schema.js";
 import { indexDocumentChunks } from "../services/document-retrieval.js";
+import { logger } from "../utils/logger.js";
 
 async function main() {
   const assets = await query<Asset>(
@@ -15,19 +16,23 @@ async function main() {
     try {
       const count = await indexDocumentChunks(asset, asset.extracted_text!);
       indexed += count;
-      console.log(`${asset.title}: ${count} chunks`);
+      logger.info({ title: asset.title, chunks: count }, "Asset indexed");
     } catch (error) {
       failures.push(asset.id);
-      console.error(`${asset.title}: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error({ title: asset.title, error: error instanceof Error ? error.message : String(error) }, "Asset indexing failed");
     }
   }
-  console.log(`Embedding backfill complete: ${assets.length - failures.length}/${assets.length} assets, ${indexed} chunks`);
+  logger.info({
+    success: assets.length - failures.length,
+    total: assets.length,
+    chunks: indexed
+  }, "Embedding backfill complete");
   await pool.end();
   if (failures.length) process.exitCode = 1;
 }
 
 main().catch(async (error) => {
-  console.error(error instanceof Error ? error.message : error);
+  logger.error({ error: error instanceof Error ? error.message : error }, "Embedding backfill failed");
   await pool.end().catch(() => undefined);
   process.exit(1);
 });

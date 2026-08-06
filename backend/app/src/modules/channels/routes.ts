@@ -1,14 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { audit, requireAdmin } from "../../auth/context.js";
-import { assertWorkspace } from "../../auth/permissions.js";
+import { assertWorkspaces } from "../../auth/permissions.js";
 import { env } from "../../config/env.js";
 import { one, query } from "../../db/pool.js";
 import type { ChannelBinding, User } from "../../db/schema.js";
-import { decryptSecret, encryptSecret } from "../../utils/crypto.js";
 import { createId } from "../../utils/id.js";
 import { sanitizeWechatBaseUrl, validateWechatHost, WechatILinkClient } from "./ilink.js";
-import { startWechatBinding, stopWechatBinding } from "./service.js";
+import { decryptChannelCredential, encryptChannelCredential } from "./credentials.js";
 
 const workspaceBody = z.object({ workspaceIds: z.array(z.string()).min(1).max(20) });
 
@@ -23,7 +22,7 @@ async function ownedBinding(user: User, id: string) {
 
 async function assertWorkspaceScope(user: User, workspaceIds: string[]) {
   const unique = [...new Set(workspaceIds)];
-  await Promise.all(unique.map((id) => assertWorkspace(user, id, "read")));
+  await assertWorkspaces(user, unique, "read");
   return unique;
 }
 
@@ -75,7 +74,7 @@ export async function registerChannelRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const binding = await ownedBinding(user, id);
     if (!binding) return reply.code(404).send({ error: "channel_not_found", message: "渠道不存在" });
-    const localTokens = binding.credentials_enc ? [decryptSecret(binding.credentials_enc, env.authSecret)] : [];
+    const localTokens = binding.credentials_enc ? [decryptChannelCredential(binding.credentials_enc)] : [];
     try {
       const data = await new WechatILinkClient(env.channels.wechatBaseUrl).createQrCode(localTokens);
       const qrcode = String(data.qrcode || "");
@@ -87,7 +86,6 @@ export async function registerChannelRoutes(app: FastifyInstance) {
             config = config || $2::jsonb where id = $1`,
         [id, JSON.stringify({ qrExpiresAt: expiresAt, qrRedirectBaseUrl: null })]
       );
-      stopWechatBinding(id);
       return { qrcode, content, expiresAt };
     } catch (error) {
       return reply.code(502).send({ error: "wechat_qrcode_failed", message: error instanceof Error ? error.message : "获取微信二维码失败" });
@@ -113,8 +111,11 @@ export async function registerChannelRoutes(app: FastifyInstance) {
         return { status };
       }
       if (status === "binded_redirect" && binding.credentials_enc) {
-        await query(`update channel_bindings set status = 'active', connected = false, updated_at = now() where id = $1`, [id]);
-        startWechatBinding(id);
+        await query(
+          `update channel_bindings set status = 'active', connected = false,
+             lease_owner = null, lease_expires_at = null, updated_at = now() where id = $1`,
+          [id]
+        );
         return { status: "confirmed" };
       }
       if (status !== "confirmed") return { status };
@@ -127,7 +128,7 @@ export async function registerChannelRoutes(app: FastifyInstance) {
             set credentials_enc = $2, status = 'active', connected = false, updated_at = now(),
                 config = config || $3::jsonb
           where id = $1 returning *`,
-        [id, encryptSecret(token, env.authSecret), JSON.stringify({
+        [id, encryptChannelCredential(token), JSON.stringify({
           ilinkBotId,
           ilinkUserId: String(data.ilink_user_id || ""),
           baseUrl: safeBaseUrl,
@@ -137,7 +138,6 @@ export async function registerChannelRoutes(app: FastifyInstance) {
           lastError: null
         })]
       );
-      startWechatBinding(id);
       await audit(user, "channel.wechat.connected", "channel_binding", id, { ilinkBotId });
       return { status: "confirmed", binding: publicBinding(updated!) };
     } catch (error) {
@@ -152,9 +152,9 @@ export async function registerChannelRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const binding = await ownedBinding(user, id);
     if (!binding) return reply.code(404).send({ error: "channel_not_found", message: "渠道不存在" });
-    stopWechatBinding(id);
     const updated = await one<ChannelBinding>(
       `update channel_bindings set status = 'disabled', connected = false, credentials_enc = null, updated_at = now(),
+          lease_owner = null, lease_expires_at = null,
           config = config - 'cursor' - 'lastError' where id = $1 returning *`,
       [id]
     );
@@ -168,7 +168,6 @@ export async function registerChannelRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const binding = await ownedBinding(user, id);
     if (!binding) return reply.code(404).send({ error: "channel_not_found", message: "渠道不存在" });
-    stopWechatBinding(id);
     await query(`delete from channel_bindings where id = $1 and tenant_id = $2`, [id, user.tenant_id]);
     await audit(user, "channel.delete", "channel_binding", id, {
       channel: binding.channel,

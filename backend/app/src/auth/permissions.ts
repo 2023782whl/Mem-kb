@@ -22,6 +22,15 @@ export function canPerformWorkspaceAction(role: WorkspaceRole, action: "read" | 
   return rank[role] >= rank[requiredRole(action)];
 }
 
+function authorizedWorkspace(user: User, workspace: Workspace, action: "read" | "write" | "manage") {
+  if (user.role === "admin" || user.is_admin) return { ...workspace, member_role: "owner" as const };
+  if (workspace.scope === "personal" && workspace.owner_id !== user.id) return null;
+  const globalRole = globalWorkspaceRole(user.role);
+  const memberRole = workspace.member_role;
+  const effectiveRole = memberRole && rank[memberRole] > rank[globalRole] ? memberRole : globalRole;
+  return canPerformWorkspaceAction(effectiveRole, action) ? { ...workspace, member_role: effectiveRole } : null;
+}
+
 export function assertTenantWrite(user: Pick<User, "role" | "is_admin">) {
   if (user.role === "viewer" && !user.is_admin) {
     const error = new Error("permission_denied");
@@ -41,13 +50,28 @@ export async function getWorkspaceForUser(user: User, workspaceId: string, actio
     [workspaceId, user.id, user.tenant_id, includeArchived]
   );
   if (!workspace) return null;
-  if (user.role === "admin" || user.is_admin) return { ...workspace, member_role: "owner" as const };
+  return authorizedWorkspace(user, workspace, action);
+}
 
-  if (workspace.scope === "personal" && workspace.owner_id !== user.id) return null;
-  const globalRole = globalWorkspaceRole(user.role);
-  const memberRole = workspace.member_role;
-  const effectiveRole = memberRole && rank[memberRole] > rank[globalRole] ? memberRole : globalRole;
-  return canPerformWorkspaceAction(effectiveRole, action) ? { ...workspace, member_role: effectiveRole } : null;
+export async function assertWorkspaces(user: User, workspaceIds: string[], action: "read" | "write" | "manage", includeArchived = false) {
+  const ids = [...new Set(workspaceIds)];
+  if (!ids.length) return [];
+  const rows = await query<Workspace>(
+    `select w.*, wm.role as member_role,
+            (select count(*)::int from assets a where a.workspace_id = w.id and a.deleted_at is null) as asset_count
+     from workspaces w
+     left join workspace_members wm on wm.workspace_id = w.id and wm.user_id = $2
+     where w.id = any($1::text[]) and w.tenant_id = $3 and ($4::boolean = true or w.status = 'active')`,
+    [ids, user.id, user.tenant_id, includeArchived]
+  );
+  const authorized = new Map(rows.map((workspace) => [workspace.id, authorizedWorkspace(user, workspace, action)]));
+  const ordered = ids.map((id) => authorized.get(id)).filter(Boolean) as Array<Workspace & { member_role: WorkspaceRole }>;
+  if (ordered.length !== ids.length) {
+    const error = new Error("permission_denied");
+    error.name = "PermissionDenied";
+    throw error;
+  }
+  return ordered;
 }
 
 export async function assertWorkspace(user: User, workspaceId: string, action: "read" | "write" | "manage", includeArchived = false) {

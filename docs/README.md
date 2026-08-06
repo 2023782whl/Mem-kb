@@ -54,6 +54,7 @@ mem-kb/
 - [笔记与 GBrain 阶段 1～5 实施计划](./08-notes-gbrain-phase-1-5-plan.md)
 - [GBrain 高级能力阶段 6～10 实施计划](./09-gbrain-advanced-phase-6-10-plan.md)
 - [生产部署与运维](./10-deployment-and-operations.md)
+- [稳定性、容量与故障处置](./11-reliability-runbook.md)
 
 ## 产品预览
 

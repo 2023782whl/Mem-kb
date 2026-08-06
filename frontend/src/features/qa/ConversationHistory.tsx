@@ -1,21 +1,25 @@
-import { History, MessageSquareText, Plus, Search, Trash2, X } from "lucide-react";
+import { History, MessageSquareText, Pin, Plus, Search, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmActionDialog } from "../../shared/EntityDialogs";
 import { LoadingDots } from "../../shared/LoadingSystem";
 import type { Conversation, Workspace } from "../../types/domain";
+import { useI18n, type AppLocale } from "../../i18n";
 
-export function ConversationHistory({ open, embedded = false, loading, conversations, workspaces, activeId, onClose, onNew, onSelect, onDelete }: {
+export function ConversationHistory({ open, embedded = false, pinned = false, loading, conversations, workspaces, activeId, onClose, onTogglePinned, onNew, onSelect, onDelete }: {
   open: boolean;
   embedded?: boolean;
+  pinned?: boolean;
   loading: boolean;
   conversations: Conversation[];
   workspaces: Workspace[];
   activeId: string;
   onClose: () => void;
+  onTogglePinned?: () => void;
   onNew: () => void;
   onSelect: (conversation: Conversation) => void;
   onDelete: (conversation: Conversation) => void | Promise<void>;
 }) {
+  const { locale } = useI18n();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const workspaceNames = new Map(workspaces.map((workspace) => [workspace.id, workspace.name]));
@@ -26,7 +30,12 @@ export function ConversationHistory({ open, embedded = false, loading, conversat
   if (!open && !embedded) return null;
   const content = (
       <aside className={embedded ? "conversation-rail" : "history-drawer"} aria-label="历史会话">
-        <header><div><MessageSquareText size={18} /><strong>会话</strong></div>{embedded ? null : <button className="icon-button" onClick={onClose} title="关闭"><X size={18} /></button>}</header>
+        <header>
+          <div><MessageSquareText size={18} /><strong>会话</strong></div>
+          {embedded ? <span className="panel-header-actions">
+            <button className={`icon-button ${pinned ? "active" : ""}`} onClick={onTogglePinned} title={pinned ? "取消固定问答历史" : "固定问答历史"} aria-pressed={pinned}><Pin size={16} fill={pinned ? "currentColor" : "none"} /></button>
+          </span> : <button className="icon-button" onClick={onClose} title="关闭"><X size={18} /></button>}
+        </header>
         <button className="history-new" onClick={onNew}><Plus size={17} />新对话</button>
         <label className="history-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索会话" /></label>
         <div className="history-section-heading"><span><History size={15} />问答历史</span><b>{visibleConversations.length}</b></div>
@@ -37,7 +46,7 @@ export function ConversationHistory({ open, embedded = false, loading, conversat
             <div key={conversation.id} className={`history-item ${conversation.id === activeId ? "active" : ""}`}>
               <button className="history-select" onClick={() => onSelect(conversation)}>
                 <MessageSquareText size={17} />
-                <span><strong>{conversation.title}</strong><em>{workspaceNames.get(conversation.workspace_id) || "知识库"} · {formatDate(conversation.updated_at)}</em></span>
+                <span><strong>{conversation.title}</strong><em>{workspaceNames.get(conversation.workspace_id) || "知识库"} · {formatDate(conversation.updated_at, locale)}</em></span>
               </button>
               <button className="history-delete" onClick={() => setDeleteTarget(conversation)} title="删除会话" aria-label={`删除会话：${conversation.title}`}>
                 <Trash2 size={15} />
@@ -54,6 +63,6 @@ export function ConversationHistory({ open, embedded = false, loading, conversat
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+function formatDate(value: string, locale: AppLocale) {
+  return new Intl.DateTimeFormat(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }

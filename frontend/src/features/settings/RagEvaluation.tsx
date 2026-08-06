@@ -2,8 +2,10 @@ import { AlertTriangle, CheckCircle2, FileCheck2, Play, SearchCheck } from "luci
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "../../api/client";
 import type { RagEvaluationQuery, RagEvaluationRun, Workspace } from "../../types/domain";
+import { useI18n } from "../../i18n";
 
 export function RagEvaluation() {
+  const { locale } = useI18n();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [runs, setRuns] = useState<RagEvaluationRun[]>([]);
@@ -58,7 +60,7 @@ export function RagEvaluation() {
       <Metric icon={<FileCheck2 />} label="引用正确性" value={activeRun ? activeRun.citation_correctness : null} detail="引用仍可追溯的比例" />
     </section>
     <div className="evaluation-layout">
-      <section className="evaluation-runs"><h2>评测记录</h2>{runs.map((run) => <button key={run.id} className={activeRun?.id === run.id ? "active" : ""} onClick={() => void openRun(run)}><span><strong>{run.workspace_name || run.workspace_id}</strong><em>{new Date(run.created_at).toLocaleString("zh-CN")}</em></span><b className={run.status}>{run.query_count} 条</b></button>)}{!runs.length ? <p>运行首次评测后显示记录。</p> : null}</section>
+      <section className="evaluation-runs"><h2>评测记录</h2>{runs.map((run) => <button key={run.id} className={activeRun?.id === run.id ? "active" : ""} onClick={() => void openRun(run)}><span><strong>{run.workspace_name || run.workspace_id}</strong><em>{new Date(run.created_at).toLocaleString(locale)}</em></span><b className={run.status}>{run.query_count} 条</b></button>)}{!runs.length ? <p>运行首次评测后显示记录。</p> : null}</section>
       <section className="evaluation-detail"><header><div><h2>查询明细</h2><p>{activeRun ? `${activeRun.workspace_name || activeRun.workspace_id} · ${activeRun.query_count} 条基准查询` : "选择一条评测记录"}</p></div></header>{queries.map((item) => <QueryResult key={item.id} item={item} />)}{activeRun && !queries.length ? <div className="evaluation-empty"><AlertTriangle /><strong>暂无可评测样本</strong><span>该知识库还没有带文档引用的成功问答；产生真实引用后再运行。</span></div> : null}</section>
     </div>
   </div>;

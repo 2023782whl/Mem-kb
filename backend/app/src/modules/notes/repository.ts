@@ -23,11 +23,16 @@ export async function listNoteFacts(tenantId: string, workspaceId: string, statu
 }
 
 export async function listVerifiedFactText(tenantId: string, workspaceId: string, limit = 20) {
+  return listVerifiedFactTextForWorkspaces(tenantId, [workspaceId], limit);
+}
+
+export async function listVerifiedFactTextForWorkspaces(tenantId: string, workspaceIds: string[], limit = 20) {
+  if (!workspaceIds.length) return [];
   const rows = await query<Pick<NoteFact, "fact" | "corrected_fact">>(
     `select fact, corrected_fact from note_facts
-     where tenant_id = $1 and workspace_id = $2 and status = 'verified'
+     where tenant_id = $1 and workspace_id = any($2::text[]) and status = 'verified'
      order by updated_at desc limit $3`,
-    [tenantId, workspaceId, limit]
+    [tenantId, workspaceIds, limit]
   );
   return rows.map((row) => row.corrected_fact || row.fact);
 }

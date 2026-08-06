@@ -5,7 +5,7 @@ import { assertWorkspace } from "../../auth/permissions.js";
 import { one, query, runAsSystem } from "../../db/pool.js";
 import type { ConsolidationConfig, ConsolidationRun } from "../../db/schema.js";
 import { createId } from "../../utils/id.js";
-import { executeConsolidation, nextScheduledAt } from "./service.js";
+import { nextScheduledAt, scheduleConsolidation } from "./service.js";
 
 const configSchema = z.object({
   enabled: z.boolean(),
@@ -55,8 +55,8 @@ export async function registerConsolidationRoutes(app: FastifyInstance) {
     if (!user) return;
     const config = await ensureConfig(user.tenant_id);
     await Promise.all(config.workspace_ids.map((id) => assertWorkspace(user, id, "read")));
-    const run = await runAsSystem(() => executeConsolidation(user.tenant_id, config.workspace_ids, "manual"));
-    return { run };
+    const run = await runAsSystem(() => scheduleConsolidation(user.tenant_id, config.workspace_ids, "manual"));
+    return reply.code(202).send({ run });
   });
 }
 

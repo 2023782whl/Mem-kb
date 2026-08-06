@@ -48,8 +48,9 @@ export function createMindMapLayout(nodes: DocumentTreeNode[], collapsed: Set<st
   };
 
   const placeSide = (sideTopics: DocumentTreeNode[], side: "left" | "right", topicOffset: number) => {
-    const gap = 44;
-    const spans = sideTopics.map((topic) => Math.max(88, leafWeight(topic) * 56));
+    const oneSided = direction !== "both";
+    const gap = oneSided ? 22 : 44;
+    const spans = sideTopics.map((topic) => Math.max(oneSided ? 58 : 88, leafWeight(topic) * (oneSided ? 48 : 56)));
     const total = spans.reduce((sum, span) => sum + span, 0) + Math.max(0, spans.length - 1) * gap;
     let cursor = -total / 2;
 

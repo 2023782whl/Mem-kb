@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Code2, Download, Eye, Image as ImageIcon, Network, NotebookPen, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ArrowUp, Code2, Download, Eye, Image as ImageIcon, Network, NotebookPen, RefreshCw, Settings2, Sparkles, Trash2 } from "lucide-react";
 import { api } from "../../api/client";
 import { EmptyState } from "../../shared/EmptyState";
 import { MarkdownContent } from "../../shared/MarkdownContent";
@@ -9,6 +9,8 @@ import { AssetStatus, formatBytes } from "./AssetStatus";
 import { FileTypeIcon, resolveFileFormat } from "./FileTypeIcon";
 import { KnowledgeGraph } from "./KnowledgeGraph";
 import { useLocation } from "wouter";
+import { useI18n } from "../../i18n";
+import { AiOverviewPanel } from "../../shared/AiOverviewPanel";
 
 export type WorkbenchView = "graph" | "summary" | "preview" | "source";
 
@@ -65,6 +67,8 @@ export function AssetWorkbench({
 
   const asset = preview?.asset || selectedAsset;
   const isDocument = Boolean(asset && asset.type !== "image");
+  // Empty workspaces fall back to the graph.
+  const resolvedView: WorkbenchView = view === "summary" && !asset ? "graph" : view;
   const vision = useMemo(() => {
     const metadata = asset?.metadata || {};
     return ((metadata.vision as Record<string, unknown> | undefined) || metadata) as Record<string, unknown>;
@@ -98,40 +102,43 @@ export function AssetWorkbench({
     }
   }
 
-  const title = view === "graph" ? "知识关系图谱" : asset?.title || "资产详情";
-  const description = view === "graph"
+  const title = resolvedView === "graph" ? "知识关系图谱" : asset?.title || "资产详情";
+  const description = resolvedView === "graph"
     ? `${workspaceName || "Workspace"} · 仅展示真实资产与可追溯关系`
-    : view === "summary" ? "节点摘要与资产标签" : asset?.summary || "查看解析内容与索引状态";
+    : resolvedView === "summary" ? "节点摘要与资产标签" : asset?.summary || "查看解析内容与索引状态";
 
   return (
     <section className="knowledge-detail">
       <header className="workbench-header">
-        <div className="workbench-heading">
-          {view !== "graph" && asset ? <AssetKindIcon asset={asset} compact /> : null}
-          <div><h2>{title}</h2><p>{description}</p></div>
-        </div>
-        <div className="workbench-actions">
-          <div className="segmented-control workbench-tabs" role="tablist" aria-label="知识工作区视图">
-            <button type="button" className={view === "graph" ? "active" : ""} onClick={() => onViewChange("graph")}><Network size={15} />图谱</button>
-            {asset ? <button type="button" className={view === "preview" ? "active" : ""} onClick={() => onViewChange("preview")}><Eye size={15} />{asset.type === "image" ? "素材详情" : "预览"}</button> : null}
-            {isDocument ? <button type="button" className={view === "source" ? "active" : ""} onClick={() => onViewChange("source")} disabled={!preview}><Code2 size={15} />Markdown 原文</button> : null}
+        <div className="workbench-title-row">
+          <div className="workbench-heading">
+            {resolvedView !== "graph" && asset ? <AssetKindIcon asset={asset} compact /> : null}
+            <div><h2>{title}</h2><p>{description}</p></div>
           </div>
-          {asset ? <>{isDocument ? <button type="button" className="icon-button" onClick={() => void openInNotes()} title="在笔记中打开" disabled={busy}><NotebookPen size={16} /></button> : null}<button type="button" className="icon-button" onClick={() => void onDownload(asset)} title="下载原文件"><Download size={16} /></button><button type="button" className="icon-button" onClick={() => onManage(asset)} title="管理资产"><Settings2 size={16} /></button><button type="button" className="icon-button danger-icon" onClick={() => void onDelete(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={16} /></button></> : null}
+        </div>
+        <div className="workbench-toolbar-row">
+          <div className="segmented-control workbench-tabs" role="tablist" aria-label="知识工作区视图">
+            <button type="button" className={resolvedView === "graph" ? "active" : ""} onClick={() => onViewChange("graph")}><Network size={15} />图谱</button>
+            {asset ? <button type="button" className={resolvedView === "summary" ? "active" : ""} onClick={() => onViewChange("summary")}><Sparkles size={15} />摘要</button> : null}
+            {asset ? <button type="button" className={resolvedView === "preview" ? "active" : ""} onClick={() => onViewChange("preview")}><Eye size={15} />{asset.type === "image" ? "素材详情" : "预览"}</button> : null}
+            {isDocument ? <button type="button" className={resolvedView === "source" ? "active" : ""} onClick={() => onViewChange("source")} disabled={!preview}><Code2 size={15} />Markdown 原文</button> : null}
+          </div>
+          {asset ? <div className="workbench-utility-actions">{isDocument ? <button type="button" className="icon-button" onClick={() => void openInNotes()} title="在笔记中打开" disabled={busy}><NotebookPen size={16} /></button> : null}<button type="button" className="icon-button" onClick={() => void onDownload(asset)} title="下载原文件"><Download size={16} /></button><button type="button" className="icon-button" onClick={() => onManage(asset)} title="管理资产"><Settings2 size={16} /></button><button type="button" className="icon-button danger-icon" onClick={() => void onDelete(asset)} title="移入回收站" aria-label={`移入回收站：${asset.title}`}><Trash2 size={16} /></button></div> : null}
           <span className="graph-status"><Network size={15} />{graph.nodes.filter((node) => node.assetId).length} 个真实节点</span>
         </div>
       </header>
 
       {error ? <div className="workbench-error" role="alert">{error}</div> : null}
-      <div className={`detail-body workbench-body view-${view}`}>
-        {view === "graph" ? <KnowledgeGraph nodes={graph.nodes} edges={graph.edges} selectedAssetId={asset?.id} onSelect={onSelectNode} /> : null}
-        {view !== "graph" && !asset ? <EmptyState title="请选择一个资产" detail="从左侧列表或知识图谱中选择文档或图片。" /> : null}
-        {view === "summary" && asset ? <AssetSummary asset={asset} onEnter={() => onViewChange("preview")} /> : null}
-        {view === "preview" && asset?.type === "image" ? <ImagePreview asset={asset} vision={vision} /> : null}
-        {view === "preview" && isDocument ? <DocumentPreview asset={asset!} text={preview?.text || ""} /> : null}
-        {view === "source" && isDocument ? <pre className="markdown-source workbench-source"><code>{preview?.text || "暂无可预览正文"}</code></pre> : null}
+      <div className={`detail-body workbench-body view-${resolvedView}`}>
+        {resolvedView === "graph" ? <KnowledgeGraph nodes={graph.nodes} edges={graph.edges} selectedAssetId={asset?.id} onSelect={onSelectNode} /> : null}
+        {resolvedView !== "graph" && !asset ? <EmptyState title="请选择一个资产" detail="从左侧列表或知识图谱中选择文档或图片。" /> : null}
+        {resolvedView === "summary" && asset ? <AssetSummary asset={asset} onEnter={() => onViewChange("preview")} /> : null}
+        {resolvedView === "preview" && asset?.type === "image" ? <ImagePreview asset={asset} vision={vision} /> : null}
+        {resolvedView === "preview" && isDocument ? <DocumentPreview asset={asset!} text={preview?.text || ""} busy={busy} onRegenerate={() => void retry()} /> : null}
+        {resolvedView === "source" && isDocument ? <pre className="markdown-source workbench-source"><code>{preview?.text || "暂无可预览正文"}</code></pre> : null}
       </div>
 
-      {asset?.status === "failed" && view !== "graph" ? <footer className="workbench-footer"><span>{asset.error || "解析失败"}</span><button type="button" className="button secondary compact" onClick={() => void retry()} disabled={busy}><RefreshCw size={15} />重新解析</button></footer> : null}
+      {asset?.status === "failed" && resolvedView !== "graph" ? <footer className="workbench-footer"><span>{asset.error || "解析失败"}</span><button type="button" className="button secondary compact" onClick={() => void retry()} disabled={busy}><RefreshCw size={15} />重新解析</button></footer> : null}
     </section>
   );
 }
@@ -153,18 +160,64 @@ function AssetKindIcon({ asset, compact = false }: { asset: Asset; compact?: boo
     : <FileTypeIcon format={asset.format} title={asset.title} compact={compact} />;
 }
 
-function DocumentPreview({ asset, text }: { asset: Asset; text: string }) {
+function DocumentPreview({ asset, text, busy, onRegenerate }: { asset: Asset; text: string; busy: boolean; onRegenerate: () => void }) {
+  const { locale } = useI18n();
+  const [progress, setProgress] = useState(0);
+  const articleRef = useRef<HTMLElement>(null);
+  const outline = useMemo(() => extractDocumentOutline(text), [text]);
+
+  useEffect(() => {
+    const article = articleRef.current;
+    const scroller = article?.closest<HTMLElement>(".detail-body");
+    if (!article || !scroller) return;
+    const headingNodes = article.querySelectorAll<HTMLElement>(".document-content h1, .document-content h2, .document-content h3");
+    headingNodes.forEach((node, index) => { node.id = `document-heading-${index}`; });
+    const update = () => {
+      const available = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+      setProgress(Math.min(1, scroller.scrollTop / available));
+    };
+    update();
+    scroller.addEventListener("scroll", update, { passive: true });
+    return () => scroller.removeEventListener("scroll", update);
+  }, [text]);
+
+  function jumpTo(index: number) {
+    articleRef.current?.querySelector<HTMLElement>(`#document-heading-${index}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function backToTop() {
+    articleRef.current?.closest<HTMLElement>(".detail-body")?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
-    <article className="workbench-document">
+    <article className="workbench-document" ref={articleRef}>
       <div className="detail-metadata">
         <div><span>状态</span><AssetStatus status={asset.status} /></div>
         <div><span>类型</span><strong>{resolveFileFormat(asset.format, asset.title).toUpperCase()}</strong></div>
         <div><span>解析器</span><strong>{asset.processing_provider || "历史资产"}</strong></div>
         <div><span>大小</span><strong>{formatBytes(asset.size_bytes)}</strong></div>
+        <div><span>更新时间</span><strong>{new Intl.DateTimeFormat(locale, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(asset.updated_at))}</strong></div>
       </div>
-      <section className="document-content"><MarkdownContent source={text || "暂无可预览正文"} /></section>
+      <AiOverviewPanel
+        subjectKey={`asset:${asset.id}`}
+        summary={asset.summary || "该资产暂未生成摘要。"}
+        busy={busy}
+        onRegenerate={onRegenerate}
+      />
+      <div className="document-reading-layout">
+        <section className="document-content"><MarkdownContent source={text || "暂无可预览正文"} /></section>
+        {outline.length ? <aside className="document-outline"><strong>目录</strong>{outline.map((heading, index) => <button type="button" key={`${heading.text}-${index}`} className={`level-${heading.level}`} onClick={() => jumpTo(index)} title={`跳转到：${heading.text}`} aria-label={`跳转到：${heading.text}`}><span data-i18n-ignore>{heading.text}</span></button>)}</aside> : null}
+      </div>
+      <div className="document-progress" aria-label="阅读进度"><i style={{ width: `${progress * 100}%` }} /></div>
+      {progress > .12 ? <button type="button" className="document-back-top" onClick={backToTop} title="回到顶部"><ArrowUp /></button> : null}
     </article>
   );
+}
+
+function extractDocumentOutline(markdown: string) {
+  return Array.from(markdown.matchAll(/^(#{1,3})\s+(.+)$/gm))
+    .slice(0, 28)
+    .map((match) => ({ level: match[1].length, text: match[2].replace(/[*_`\[\]]/g, "").trim() }));
 }
 
 function ImagePreview({ asset, vision }: { asset: Asset; vision: Record<string, unknown> }) {

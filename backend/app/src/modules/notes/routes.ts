@@ -6,7 +6,7 @@ import { env } from "../../config/env.js";
 import { one, query } from "../../db/pool.js";
 import type { Asset, Note, NoteFact, NoteFolder } from "../../db/schema.js";
 import { forgetGBrainFact } from "../../services/gbrain.js";
-import { streamNoteAssistant } from "../../services/model.js";
+import { generateNoteOverview, optimizeNoteContent, streamNoteAssistant, streamOptimizeNoteContent } from "../../services/model.js";
 import { createId } from "../../utils/id.js";
 import { createFolder, findNote, listNoteFacts } from "./repository.js";
 import {
@@ -23,6 +23,7 @@ import {
   updateNote
 } from "./service.js";
 import { publishNote } from "./publication.js";
+import { MODEL_GENERATION_TIMEOUT_MS, modelFailureMessage } from "../models/experience.js";
 
 const queryBoolean = z.enum(["true", "false"]).transform((value) => value === "true");
 
@@ -192,6 +193,88 @@ export async function registerNoteRoutes(app: FastifyInstance) {
     return { facts: await extractFacts(user, note) };
   });
 
+  app.post("/api/notes/:id/overview", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const note = await requireNote(user, (request.params as { id: string }).id);
+    if (!note) return reply.code(404).send({ error: "note_not_found", message: "笔记不存在" });
+    const body = z.object({
+      title: z.string().min(1).max(160).optional(),
+      content: z.string().max(2_000_000).optional(),
+      locale: z.enum(["zh-CN", "en-US"]).default("zh-CN")
+    }).parse(request.body || {});
+    const overview = await generateNoteOverview({
+      tenantId: user.tenant_id,
+      title: body.title || note.title,
+      markdown: body.content ?? note.content_markdown,
+      locale: body.locale
+    });
+    await audit(user, "note.overview.generate", "note", note.id, { workspaceId: note.workspace_id, locale: body.locale });
+    return { overview };
+  });
+
+  app.post("/api/notes/:id/optimize", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const note = await requireNote(user, (request.params as { id: string }).id);
+    if (!note) return reply.code(404).send({ error: "note_not_found", message: "笔记不存在" });
+    await assertWorkspace(user, note.workspace_id, "write");
+    const body = z.object({
+      title: z.string().min(1).max(160).optional(),
+      content: z.string().max(2_000_000).optional(),
+      modelId: z.string().optional(),
+      locale: z.enum(["zh-CN", "en-US"]).default("zh-CN")
+    }).parse(request.body || {});
+    try {
+      const result = await optimizeNoteContent({
+        tenantId: user.tenant_id,
+        title: body.title || note.title,
+        markdown: body.content ?? note.content_markdown,
+        modelId: body.modelId,
+        locale: body.locale
+      });
+      await audit(user, "note.content.optimize", "note", note.id, { workspaceId: note.workspace_id, locale: body.locale });
+      return result;
+    } catch (error) {
+      return reply.code(502).send({ error: "note_optimize_failed", message: modelFailureMessage(error, "优化文档失败") });
+    }
+  });
+
+  app.post("/api/notes/:id/optimize/stream", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const note = await requireNote(user, (request.params as { id: string }).id);
+    if (!note) return reply.code(404).send({ error: "note_not_found", message: "笔记不存在" });
+    await assertWorkspace(user, note.workspace_id, "write");
+    const body = z.object({
+      title: z.string().min(1).max(160).optional(),
+      content: z.string().max(2_000_000).optional(),
+      modelId: z.string().optional(),
+      locale: z.enum(["zh-CN", "en-US"]).default("zh-CN")
+    }).parse(request.body || {});
+
+    startSse(reply, request.headers.origin);
+    const controller = new AbortController();
+    reply.raw.once("close", () => {
+      if (!reply.raw.writableEnded) controller.abort(new Error("client_disconnected"));
+    });
+
+    try {
+      await streamOptimizeNoteContent({
+        tenantId: user.tenant_id,
+        title: body.title || note.title,
+        markdown: body.content ?? note.content_markdown,
+        modelId: body.modelId,
+        locale: body.locale
+      }, (event) => sendSse(reply, event.type, event), controller.signal);
+      await audit(user, "note.content.optimize.stream", "note", note.id, { workspaceId: note.workspace_id, locale: body.locale });
+    } catch (error) {
+      if (!controller.signal.aborted) sendSse(reply, "error", { message: modelFailureMessage(error, "优化文档失败") });
+    } finally {
+      reply.raw.end();
+    }
+  });
+
   app.post("/api/notes/:id/assist/stream", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
@@ -204,6 +287,7 @@ export async function registerNoteRoutes(app: FastifyInstance) {
       cursorContext: z.string().max(20_000).optional(),
       assetIds: z.array(z.string()).max(30).optional(),
       modelId: z.string().optional(),
+      locale: z.enum(["zh-CN", "en-US"]).default("zh-CN"),
       options: z.object({ knowledgeSearch: z.boolean().optional(), webSearch: z.boolean().optional() }).default({})
     }).parse(request.body);
     let scoped;
@@ -218,14 +302,15 @@ export async function registerNoteRoutes(app: FastifyInstance) {
     startSse(reply, request.headers.origin);
     scoped.sources.forEach((source) => sendSse(reply, "source", source));
     const controller = new AbortController();
+    const deadline = AbortSignal.any([controller.signal, AbortSignal.timeout(MODEL_GENERATION_TIMEOUT_MS)]);
     reply.raw.once("close", () => {
       if (!reply.raw.writableEnded) controller.abort(new Error("client_disconnected"));
     });
     try {
-      const answer = await streamNoteAssistant({ ...body, selection: body.selection || body.cursorContext, title: note.title, markdown: note.content_markdown, context: scoped.context }, (text) => sendSse(reply, "delta", { text }), controller.signal);
+      const answer = await streamNoteAssistant({ ...body, tenantId: user.tenant_id, selection: body.selection || body.cursorContext, title: note.title, markdown: note.content_markdown, context: scoped.context }, (text) => sendSse(reply, "delta", { text }), deadline);
       sendSse(reply, "done", { answer });
     } catch (error) {
-      if (!controller.signal.aborted) sendSse(reply, "error", { message: error instanceof Error ? error.message : "AI 写作失败" });
+      if (!controller.signal.aborted) sendSse(reply, "error", { message: modelFailureMessage(error, "AI 写作失败") });
     } finally {
       reply.raw.end();
     }

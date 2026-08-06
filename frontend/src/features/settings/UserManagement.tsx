@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { ConfirmActionDialog, EntityModal } from "../../shared/EntityDialogs";
 import type { User } from "../../types/domain";
+import { useI18n } from "../../i18n";
+import { UserAvatar } from "../../shared/UserAvatar";
 
 const roleLabels: Record<User["role"], string> = {
   admin: "管理员",
@@ -21,6 +23,7 @@ type UserDraft = Pick<User, "name" | "email" | "role" | "status"> & { password: 
 const emptyDraft: UserDraft = { name: "", email: "", password: "", role: "viewer", status: "active" };
 
 export function UserManagement({ currentUser }: { currentUser: User }) {
+  const { locale } = useI18n();
   const [users, setUsers] = useState<User[]>([]);
   const [draft, setDraft] = useState<UserDraft>(emptyDraft);
   const [editing, setEditing] = useState<User | null>(null);
@@ -110,10 +113,10 @@ export function UserManagement({ currentUser }: { currentUser: User }) {
         <div className="enterprise-table-head"><span>用户</span><span>角色</span><span>状态</span><span>创建时间</span><span>操作</span></div>
         {users.map((user) => (
           <div key={user.id}>
-            <span className="user-identity"><i>{user.name.slice(0, 1).toUpperCase()}</i><span><strong>{user.name}{user.id === currentUser.id ? <em>当前账号</em> : null}</strong><small>{user.email}</small></span></span>
+            <span className="user-identity"><UserAvatar user={user} size={30} /><span><strong>{user.name}{user.id === currentUser.id ? <em>当前账号</em> : null}</strong><small>{user.email}</small></span></span>
             <span className={`role-badge ${user.role}`}><strong>{roleLabels[user.role]}</strong><small>{roleDescriptions[user.role]}</small></span>
             <span className={`account-status ${user.status}`}>{user.status === "active" ? "已启用" : "已停用"}</span>
-            <span>{new Date(user.created_at).toLocaleDateString("zh-CN")}</span>
+            <span>{new Date(user.created_at).toLocaleDateString(locale)}</span>
             <span className="row-actions"><button onClick={() => beginEdit(user)} title="编辑用户"><Pencil size={14} /></button><button className="danger" disabled={user.id === currentUser.id} onClick={() => setDeleting(user)} title="删除用户"><Trash2 size={14} /></button></span>
           </div>
         ))}

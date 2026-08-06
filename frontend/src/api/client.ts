@@ -1,11 +1,13 @@
 import type {
   Asset, BusinessUnit, Category, Citation, Conversation, ConversationMessage,
-  GraphEdge, GraphNode, InsightItem, Message, ModelInfo, Note, NoteFact, NoteFolder,
+  GraphEdge, GraphNode, InsightItem, Message, ModelInfo, Note, NoteFact, NoteFolder, NoteOverview,
   NoteLifecycle, Product, User, Workspace, WorkspaceMember, GBrainGraphDetail, GBrainGovernance,
   GBrainIntelligence, GBrainObject, GBrainOperations, GBrainSeed, NoteAssistantSource, NoteRevision,
   ChannelBinding, ChannelDelivery, ChannelIdentity, ChannelMessage, QaTrace, QaTraceDetail,
-  ConsolidationConfig, ConsolidationLog, ConsolidationRun, RagEvaluationQuery, RagEvaluationRun
+  ConsolidationConfig, ConsolidationLog, ConsolidationRun, RagEvaluationQuery, RagEvaluationRun,
+  ModelConfig, ModelConfigInput
 } from "../types/domain";
+import { formatAssistantError } from "../shared/AssistantExperience";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? "http://127.0.0.1:8788" : "");
 
@@ -54,13 +56,19 @@ export interface StreamHandlers {
 }
 
 async function streamAsk(body: AskBody, handlers: StreamHandlers, signal?: AbortSignal) {
-  const response = await fetch(`${API_BASE}/api/qa/stream`, {
-    method: "POST",
-    credentials: "include",
-    headers: headers(JSON.stringify(body)),
-    body: JSON.stringify(body),
-    signal
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/qa/stream`, {
+      method: "POST",
+      credentials: "include",
+      headers: headers(JSON.stringify(body)),
+      body: JSON.stringify(body),
+      signal
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error(formatAssistantError(error, "无法连接 AI 问答服务"));
+  }
   notifyUnauthorized(response);
   if (!response.ok || !response.body) {
     const payload = await response.json().catch(() => ({}));
@@ -80,7 +88,7 @@ async function streamAsk(body: AskBody, handlers: StreamHandlers, signal?: Abort
       const data = frame.match(/^data:\s*(.+)$/m)?.[1];
       if (!event || !data) continue;
       const payload: unknown = JSON.parse(data);
-      if (event === "error") throw new Error((payload as { message?: string }).message || "流式问答失败");
+      if (event === "error") throw new Error(formatAssistantError((payload as { message?: string }).message, "流式问答失败"));
       if (event === "meta") handlers.meta?.(payload as Parameters<NonNullable<StreamHandlers["meta"]>>[0]);
       if (event === "citation") handlers.citation?.(payload as Citation);
       if (event === "delta") handlers.delta?.(payload as { text: string });
@@ -98,18 +106,25 @@ async function streamNoteAssist(
     cursorContext?: string;
     assetIds?: string[];
     modelId?: string;
+    locale?: "zh-CN" | "en-US";
     options?: { knowledgeSearch?: boolean; webSearch?: boolean };
   },
   handlers: { source?: (source: NoteAssistantSource) => void; delta?: (text: string) => void; done?: (answer: string) => void },
   signal?: AbortSignal
 ) {
-  const response = await fetch(`${API_BASE}/api/notes/${noteId}/assist/stream`, {
-    method: "POST",
-    credentials: "include",
-    headers: headers(JSON.stringify(body)),
-    body: JSON.stringify(body),
-    signal
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/notes/${noteId}/assist/stream`, {
+      method: "POST",
+      credentials: "include",
+      headers: headers(JSON.stringify(body)),
+      body: JSON.stringify(body),
+      signal
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error(formatAssistantError(error, "无法连接 AI 写作服务"));
+  }
   notifyUnauthorized(response);
   if (!response.ok || !response.body) throw new Error("AI 写作请求失败");
   const reader = response.body.getReader();
@@ -126,10 +141,63 @@ async function streamNoteAssist(
       const data = frame.match(/^data:\s*(.+)$/m)?.[1];
       if (!event || !data) continue;
       const payload = JSON.parse(data) as { text?: string; answer?: string; message?: string };
-      if (event === "error") throw new Error(payload.message || "AI 写作失败");
+      if (event === "error") throw new Error(formatAssistantError(payload.message, "AI 写作失败"));
       if (event === "source") handlers.source?.(payload as unknown as NoteAssistantSource);
       if (event === "delta" && payload.text) handlers.delta?.(payload.text);
       if (event === "done") handlers.done?.(payload.answer || "");
+    }
+  }
+}
+
+async function streamOptimizeNote(
+  noteId: string,
+  body: { title?: string; content?: string; modelId?: string; locale: "zh-CN" | "en-US" },
+  handlers: {
+    start?: (event: { total: number }) => void;
+    chunkStart?: (event: { index: number; total: number }) => void;
+    chunkReset?: (event: { index: number; total: number; markdown: string }) => void;
+    delta?: (text: string) => void;
+    chunkDone?: (event: { index: number; total: number }) => void;
+    done?: (event: { markdown: string; fallback?: boolean }) => void;
+  },
+  signal?: AbortSignal
+) {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/notes/${noteId}/optimize/stream`, {
+      method: "POST",
+      credentials: "include",
+      headers: headers(JSON.stringify(body)),
+      body: JSON.stringify(body),
+      signal
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error(formatAssistantError(error, "无法连接优化服务"));
+  }
+  notifyUnauthorized(response);
+  if (!response.ok || !response.body) throw new Error("优化文档请求失败");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const frames = buffer.split(/\n\n/);
+    buffer = frames.pop() || "";
+    for (const frame of frames) {
+      const event = frame.match(/^event:\s*(.+)$/m)?.[1];
+      const data = frame.match(/^data:\s*(.+)$/m)?.[1];
+      if (!event || !data) continue;
+      const payload = JSON.parse(data) as { text?: string; markdown?: string; message?: string; index?: number; total?: number; fallback?: boolean };
+      if (event === "error") throw new Error(formatAssistantError(payload.message, "优化文档失败"));
+      if (event === "start") handlers.start?.({ total: payload.total || 1 });
+      if (event === "chunk-start") handlers.chunkStart?.({ index: payload.index || 0, total: payload.total || 1 });
+      if (event === "chunk-reset") handlers.chunkReset?.({ index: payload.index || 0, total: payload.total || 1, markdown: payload.markdown || "" });
+      if (event === "delta" && payload.text) handlers.delta?.(payload.text);
+      if (event === "chunk-done") handlers.chunkDone?.({ index: payload.index || 0, total: payload.total || 1 });
+      if (event === "done") handlers.done?.({ markdown: payload.markdown || "", fallback: payload.fallback });
     }
   }
 }
@@ -156,12 +224,28 @@ export const api = {
   me: () => request<{ user: User }>("/api/me"),
   health: () => request<{ ok: boolean; gbrain: Record<string, unknown>; models: ModelInfo[] }>("/api/health"),
   models: () => request<{ models: ModelInfo[] }>("/api/models"),
+  modelConfigs: () => request<{ configs: ModelConfig[] }>("/api/model-configs"),
+  createModelConfig: (body: ModelConfigInput & { apiKey: string }) => request<{ config: ModelConfig }>("/api/model-configs", { method: "POST", body: JSON.stringify(body) }),
+  updateModelConfig: (id: string, body: Partial<ModelConfigInput>) => request<{ config: ModelConfig }>(`/api/model-configs/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  testModelConfig: (id: string) => request<{ config: ModelConfig; checks: { text: boolean; stream: boolean; json: boolean } }>(`/api/model-configs/${id}/test`, { method: "POST" }),
+  enableModelConfig: (id: string, enabled: boolean) => request<{ config: ModelConfig }>(`/api/model-configs/${id}/enable`, { method: "POST", body: JSON.stringify({ enabled }) }),
+  defaultModelConfig: (id: string) => request<{ config: ModelConfig }>(`/api/model-configs/${id}/default`, { method: "POST" }),
+  deleteModelConfig: (id: string) => request<{ ok: boolean }>(`/api/model-configs/${id}`, { method: "DELETE" }),
   users: () => request<{ users: User[] }>("/api/users"),
   createUser: (body: { name: string; email: string; password: string; role: User["role"]; status: User["status"] }) =>
     request<{ user: User }>("/api/users", { method: "POST", body: JSON.stringify(body) }),
   updateUser: (id: string, body: Partial<Pick<User, "name" | "email" | "role" | "status">> & { password?: string }) =>
     request<{ user: User }>(`/api/users/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteUser: (id: string) => request<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  userAvatarUrl: (id: string, revision = "") => `${API_BASE}/api/users/${encodeURIComponent(id)}/avatar${revision ? `?revision=${encodeURIComponent(revision)}` : ""}`,
+  uploadMyAvatar: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<{ user: User }>("/api/me/avatar", { method: "POST", body: form });
+  },
+  setMyAvatar: (body: { type: "initials" } | { type: "preset"; value: string }) =>
+    request<{ user: User }>("/api/me/avatar", { method: "PATCH", body: JSON.stringify(body) }),
+  resetMyAvatar: () => request<{ user: User }>("/api/me/avatar", { method: "DELETE" }),
   businessUnits: () => request<{ businessUnits: BusinessUnit[] }>("/api/business-units"),
   workspaces: (status: "active" | "archived" | "all" = "active") => request<{ workspaces: Workspace[] }>(`/api/workspaces?status=${status}`),
   channels: () => request<{ bindings: ChannelBinding[] }>("/api/channels"),
@@ -299,6 +383,9 @@ export const api = {
   noteLifecycle: (id: string) => request<NoteLifecycle>(`/api/notes/${id}/lifecycle`),
   revertNote: (id: string, versionId: number) => request<{ note: Note }>(`/api/notes/${id}/revert`, { method: "POST", body: JSON.stringify({ versionId }) }),
   extractNoteFacts: (id: string) => request<{ facts: NoteFact[] }>(`/api/notes/${id}/extract-facts`, { method: "POST" }),
+  noteOverview: (id: string, body: { title?: string; content?: string; locale: "zh-CN" | "en-US" }) => request<{ overview: NoteOverview }>(`/api/notes/${id}/overview`, { method: "POST", body: JSON.stringify(body) }),
+  optimizeNote: (id: string, body: { title?: string; content?: string; modelId?: string; locale: "zh-CN" | "en-US" }) =>
+    request<{ markdown: string }>(`/api/notes/${id}/optimize`, { method: "POST", body: JSON.stringify(body) }),
   facts: (workspaceId: string, status?: NoteFact["status"], noteId?: string) => {
     const params = new URLSearchParams({ workspaceId });
     if (status) params.set("status", status);
@@ -324,5 +411,6 @@ export const api = {
   cancelGBrainJob: (id: number) => request<{ job: GBrainObject }>(`/api/gbrain/jobs/${id}/cancel`, { method: "POST" }),
   gbrainGovernance: () => request<GBrainGovernance>("/api/gbrain/governance"),
   gbrainSkill: (name: string, sourceId?: string) => request<{ skill: { available: boolean; data: GBrainObject | null; error?: string } }>(`/api/gbrain/skills/${encodeURIComponent(name)}${sourceId ? `?sourceId=${encodeURIComponent(sourceId)}` : ""}`),
-  streamNoteAssist
+  streamNoteAssist,
+  streamOptimizeNote
 };

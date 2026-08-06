@@ -1,16 +1,32 @@
 import { Queue, type ConnectionOptions } from "bullmq";
 import { env } from "../config/env.js";
 
-export const redisConnection: ConnectionOptions = {
+export interface AssetQueueJob {
+  assetId: string;
+  processingId: string;
+}
+
+const redisBase: ConnectionOptions = {
   host: env.redis.host,
   port: env.redis.port,
   password: env.redis.password || undefined,
-  db: env.redis.db,
+  db: env.redis.db
+};
+
+export const queueRedisConnection: ConnectionOptions = {
+  ...redisBase,
+  maxRetriesPerRequest: 1
+};
+
+export const workerRedisConnection: ConnectionOptions = {
+  ...redisBase,
   maxRetriesPerRequest: null
 };
 
-const assetQueue = new Queue<{ assetId: string }>("aiteam-asset-processing", {
-  connection: redisConnection,
+export const assetQueueName = process.env.ASSET_QUEUE_NAME || "aiteam-asset-processing";
+
+const assetQueue = new Queue<AssetQueueJob>(assetQueueName, {
+  connection: queueRedisConnection,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: "exponential", delay: 2_000 },
@@ -19,8 +35,8 @@ const assetQueue = new Queue<{ assetId: string }>("aiteam-asset-processing", {
   }
 });
 
-export async function enqueueAssetProcessing(assetId: string) {
-  await assetQueue.add("process", { assetId });
+export async function enqueueAssetProcessing(assetId: string, processingId: string) {
+  await assetQueue.add("process", { assetId, processingId }, { jobId: processingId });
 }
 
 export async function assetQueueCounts() {

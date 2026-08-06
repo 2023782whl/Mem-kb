@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeWechatMessage, sanitizeWechatBaseUrl, splitWechatText, validateWechatHost
 } from "../src/modules/channels/ilink.js";
+import { resolveChannelQaOptions } from "../src/modules/channels/intent.js";
 
 describe("WeChat iLink adapter", () => {
   it("accepts only trusted HTTPS WeChat hosts", () => {
@@ -33,5 +34,11 @@ describe("WeChat iLink adapter", () => {
     expect(parts.length).toBeGreaterThan(1);
     expect(parts.every((part) => part.length <= 120)).toBe(true);
     expect(parts.join("").replace(/\s/g, "")).toBe(source.replace(/\s/g, ""));
+  });
+
+  it("enables image recall only for image intent", () => {
+    expect(resolveChannelQaOptions("给我一张知识问答的图片")).toMatchObject({ documentQa: true, imageSearch: true, webSearch: false });
+    expect(resolveChannelQaOptions("解释运营 SOP")).toMatchObject({ imageSearch: false, webSearch: false });
+    expect(resolveChannelQaOptions("联网查看最新消息")).toMatchObject({ imageSearch: false, webSearch: true });
   });
 });

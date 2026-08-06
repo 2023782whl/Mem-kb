@@ -11,7 +11,9 @@ import { runKnowledgeAnswer, streamKnowledgeAnswer } from "../../services/model.
 import { writeGeneratedMarkdown } from "../../services/storage.js";
 import { createId, slugSegment } from "../../utils/id.js";
 import { persistQaAnswer, prepareQa, type QaRequest } from "./service.js";
+import { withQaAdmission } from "./admission.js";
 import { failTrace, rateTraceForMessage, traceEvent } from "../traces/service.js";
+import { MODEL_GENERATION_TIMEOUT_MS, modelFailureMessage } from "../models/experience.js";
 
 const askSchema = z.object({
   workspaceId: z.string(),
@@ -36,6 +38,7 @@ function publicCitation(citation: Citation) {
   return {
     id: citation.id,
     message_id: citation.message_id,
+    workspaceId: citation.workspace_id,
     title: citation.title,
     snippet: citation.snippet,
     assetId: citation.asset_id,
@@ -47,6 +50,7 @@ function publicCitation(citation: Citation) {
 }
 
 export async function registerQaRoutes(app: FastifyInstance) {
+  const qaRateLimit = { config: { rateLimit: { max: env.resilience.qaRequestsPerMinute, timeWindow: "1 minute" } } };
   app.get("/api/qa/conversations", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
@@ -56,7 +60,7 @@ export async function registerQaRoutes(app: FastifyInstance) {
     if (params.workspaceId) {
       await assertWorkspace(user, params.workspaceId, "read");
       values.push(params.workspaceId);
-      sql += ` and workspace_id = $${values.length}`;
+      sql += ` and $${values.length} = any(workspace_ids)`;
     }
     return { conversations: await query<Conversation>(`${sql} order by updated_at desc limit 40`, values) };
   });
@@ -70,7 +74,7 @@ export async function registerQaRoutes(app: FastifyInstance) {
       [id, user.tenant_id, user.id]
     );
     if (!conversation) return reply.code(404).send({ error: "conversation_not_found", message: "会话不存在" });
-    await assertWorkspace(user, conversation.workspace_id, "read");
+    await Promise.all((conversation.workspace_ids?.length ? conversation.workspace_ids : [conversation.workspace_id]).map((workspaceId) => assertWorkspace(user, workspaceId, "read")));
     const [messages, citations] = await Promise.all([
       query<Message>(`select * from messages where conversation_id = $1 order by created_at`, [id]),
       query<Citation>(
@@ -104,59 +108,66 @@ export async function registerQaRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  app.post("/api/qa/ask", async (request, reply) => {
+  app.post("/api/qa/ask", qaRateLimit, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const body = askSchema.parse(request.body) as QaRequest;
-    const prepared = await prepareQa(user, body);
-    try {
-      const modelStartedAt = Date.now();
-      await traceEvent(user, prepared.trace.id, "model", "running", `调用 ${body.modelId || env.model.id}`);
-      const answer = await runKnowledgeAnswer(prepared.modelInput);
-      await traceEvent(user, prepared.trace.id, "model", "completed", "模型生成完成", Date.now() - modelStartedAt);
-      const assistantMessage = await persistQaAnswer(user, body, prepared, answer);
-      return { conversation: prepared.conversation, userMessage: prepared.userMessage, assistantMessage, citations: prepared.citations, answer };
-    } catch (error) {
-      await traceEvent(user, prepared.trace.id, "model", "failed", error instanceof Error ? error.message : "模型调用失败");
-      await failTrace(prepared.trace.id, error, prepared.trace.startedAt);
-      return reply.code(502).send({ error: "model_call_failed", message: error instanceof Error ? error.message : "模型调用失败" });
-    }
+    const deadline = AbortSignal.timeout(MODEL_GENERATION_TIMEOUT_MS);
+    return withQaAdmission(async () => {
+      const prepared = await prepareQa(user, body);
+      try {
+        const modelStartedAt = Date.now();
+        await traceEvent(user, prepared.trace.id, "model", "running", `调用 ${body.modelId || env.model.id}`);
+        const answer = await runKnowledgeAnswer(prepared.modelInput, deadline);
+        await traceEvent(user, prepared.trace.id, "model", "completed", "模型生成完成", Date.now() - modelStartedAt);
+        const assistantMessage = await persistQaAnswer(user, body, prepared, answer);
+        return { conversation: prepared.conversation, userMessage: prepared.userMessage, assistantMessage, citations: prepared.citations, answer };
+      } catch (error) {
+        await traceEvent(user, prepared.trace.id, "model", "failed", error instanceof Error ? error.message : "模型调用失败");
+        await failTrace(prepared.trace.id, error, prepared.trace.startedAt);
+        if ([429, 503].includes(Number((error as { statusCode?: number }).statusCode))) throw error;
+        return reply.code(502).send({ error: "model_call_failed", message: modelFailureMessage(error, "模型调用失败") });
+      }
+    }, deadline);
   });
 
-  app.post("/api/qa/stream", async (request, reply) => {
+  app.post("/api/qa/stream", qaRateLimit, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const body = askSchema.parse(request.body) as QaRequest;
-    const prepared = await prepareQa(user, body);
-    const origin = request.headers.origin;
-    const allowedOrigins = new Set([env.frontendOrigin, "http://127.0.0.1:5177", "http://127.0.0.1:5178"]);
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      "content-type": "text/event-stream; charset=utf-8",
-      "cache-control": "no-cache, no-transform",
-      connection: "keep-alive",
-      ...(origin && allowedOrigins.has(origin) ? { "access-control-allow-origin": origin, "access-control-allow-credentials": "true", vary: "Origin" } : {})
-    });
-    sse(reply, "meta", { conversationId: prepared.conversation.id, userMessageId: prepared.userMessage.id, modelId: body.modelId });
-    prepared.citations.forEach((citation, index) => sse(reply, "citation", { index: index + 1, ...citation }));
     const controller = new AbortController();
-    reply.raw.once("close", () => {
-      if (!reply.raw.writableEnded) controller.abort(new Error("client_disconnected"));
-    });
-    try {
-      const modelStartedAt = Date.now();
-      await traceEvent(user, prepared.trace.id, "model", "running", `流式调用 ${body.modelId || env.model.id}`);
-      const answer = await streamKnowledgeAnswer(prepared.modelInput, (delta) => sse(reply, "delta", { text: delta }), controller.signal);
-      await traceEvent(user, prepared.trace.id, "model", "completed", "流式生成完成", Date.now() - modelStartedAt);
-      const assistantMessage = await persistQaAnswer(user, body, prepared, answer);
-      sse(reply, "done", { assistantMessage, answer });
-    } catch (error) {
-      await traceEvent(user, prepared.trace.id, "model", controller.signal.aborted ? "skipped" : "failed", error instanceof Error ? error.message : "流式问答失败");
-      await failTrace(prepared.trace.id, error, prepared.trace.startedAt, controller.signal.aborted ? "cancelled" : "model");
-      if (!controller.signal.aborted) sse(reply, "error", { message: error instanceof Error ? error.message : "流式问答失败", recoverable: true });
-    } finally {
-      reply.raw.end();
-    }
+    const deadline = AbortSignal.any([controller.signal, AbortSignal.timeout(MODEL_GENERATION_TIMEOUT_MS)]);
+    return withQaAdmission(async () => {
+      const prepared = await prepareQa(user, body);
+      const origin = request.headers.origin;
+      const allowedOrigins = new Set([env.frontendOrigin, "http://127.0.0.1:5177", "http://127.0.0.1:5178"]);
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive",
+        ...(origin && allowedOrigins.has(origin) ? { "access-control-allow-origin": origin, "access-control-allow-credentials": "true", vary: "Origin" } : {})
+      });
+      sse(reply, "meta", { conversationId: prepared.conversation.id, userMessageId: prepared.userMessage.id, modelId: body.modelId });
+      prepared.citations.forEach((citation, index) => sse(reply, "citation", { index: index + 1, ...citation }));
+      reply.raw.once("close", () => {
+        if (!reply.raw.writableEnded) controller.abort(new Error("client_disconnected"));
+      });
+      try {
+        const modelStartedAt = Date.now();
+        await traceEvent(user, prepared.trace.id, "model", "running", `流式调用 ${body.modelId || env.model.id}`);
+        const answer = await streamKnowledgeAnswer(prepared.modelInput, (delta) => sse(reply, "delta", { text: delta }), deadline);
+        await traceEvent(user, prepared.trace.id, "model", "completed", "流式生成完成", Date.now() - modelStartedAt);
+        const assistantMessage = await persistQaAnswer(user, body, prepared, answer);
+        sse(reply, "done", { assistantMessage, answer });
+      } catch (error) {
+        await traceEvent(user, prepared.trace.id, "model", controller.signal.aborted ? "skipped" : "failed", error instanceof Error ? error.message : "流式问答失败");
+        await failTrace(prepared.trace.id, error, prepared.trace.startedAt, controller.signal.aborted ? "cancelled" : "model");
+        if (!controller.signal.aborted) sse(reply, "error", { message: modelFailureMessage(error, "流式问答失败"), recoverable: true });
+      } finally {
+        reply.raw.end();
+      }
+    }, deadline);
   });
 
   app.post("/api/qa/messages/:id/feedback", async (request, reply) => {

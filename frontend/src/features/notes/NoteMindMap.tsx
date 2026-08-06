@@ -1,5 +1,5 @@
 import cytoscape, { type Core } from "cytoscape";
-import { ChevronsUp, Download, Focus, Maximize2, MoreHorizontal, Search, Waypoints } from "lucide-react";
+import { ChevronsUp, Download, Focus, LocateFixed, MoreHorizontal, Search, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildDocumentTree, collapsedAtDepth, visibleDocumentTree } from "./documentTree";
 import { createMindMapLayout, type MindMapDirection } from "./mindMapLayout";
@@ -12,7 +12,7 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
   const tree = useMemo(() => buildDocumentTree(title, markdown), [markdown, title]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [direction, setDirection] = useState<MindMapDirection>("both");
+  const [direction, setDirection] = useState<MindMapDirection>("right");
   const [depthPreset, setDepthPreset] = useState<DepthPreset>("all");
   const visible = useMemo(() => visibleDocumentTree(tree, collapsed), [collapsed, tree]);
   const layout = useMemo(() => createMindMapLayout(visible, collapsed, direction), [collapsed, direction, visible]);
@@ -30,7 +30,7 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
         ...layout.edges.map((edge) => ({ data: edge }))
       ],
       style: [
-        { selector: "node", style: { label: "data(label)", "font-family": "Inter, PingFang SC, sans-serif", "font-size": 13, color: "#303746", "text-wrap": "ellipsis", "text-max-width": "220px", "overlay-opacity": 0, "background-opacity": 0, "border-width": 0, width: 4, height: 4 } },
+        { selector: "node", style: { label: "data(label)", "font-family": "Inter, PingFang SC, sans-serif", "font-size": 13, color: "#303746", "text-wrap": "wrap", "text-max-width": "240px", "overlay-opacity": 0, "background-opacity": 0, "border-width": 0, width: 4, height: 4 } },
         { selector: 'node[kind = "root"]', style: { width: 348, height: 84, shape: "round-rectangle", "background-color": "#ffffff", "background-opacity": 1, "border-color": "#26336b", "border-width": 3, color: "#26336b", "font-size": 23, "font-weight": 700, "text-halign": "center", "text-valign": "center", "text-max-width": "290px", "underlay-color": "#26336b", "underlay-opacity": .08, "underlay-padding": 12 } },
         { selector: 'node[kind = "topic"]', style: { "font-size": 16, "font-weight": 700, color: "#20242c", "text-max-width": "224px" } },
         { selector: 'node[kind = "detail"]', style: { "font-size": 12, "font-weight": 500, "text-max-width": "214px" } },
@@ -52,7 +52,7 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
         { selector: 'edge[level = 1]', style: { width: 6 } },
         { selector: 'edge[level = 2]', style: { width: 3.2 } }
       ],
-      minZoom: .28,
+      minZoom: .18,
       maxZoom: 2.4,
       layout: { name: "preset", fit: false }
     });
@@ -67,10 +67,14 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
       setDepthPreset("custom");
     });
     cyRef.current = cy;
-    const frame = window.requestAnimationFrame(() => focusRoot(cy, compact));
-    const observer = new ResizeObserver(() => cy.resize());
+    const frame = window.requestAnimationFrame(() => fitMindMap(cy, compact));
+    let resizeFrame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(() => fitMindMap(cy, compact));
+    });
     observer.observe(containerRef.current);
-    return () => { window.cancelAnimationFrame(frame); observer.disconnect(); cy.destroy(); cyRef.current = null; };
+    return () => { window.cancelAnimationFrame(frame); window.cancelAnimationFrame(resizeFrame); observer.disconnect(); cy.destroy(); cyRef.current = null; };
   }, [compact, layout, tree]);
 
   useEffect(() => {
@@ -78,11 +82,11 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
     if (!cy) return;
     cy.nodes().removeClass("search-match");
     const term = search.trim().toLocaleLowerCase();
-    if (!term) return;
+    if (!term) { fitMindMap(cy, compact); return; }
     const matches = cy.nodes('[kind != "badge"]').filter((node) => String(node.data("label")).toLocaleLowerCase().includes(term));
     matches.addClass("search-match");
     if (matches.length) cy.animate({ fit: { eles: matches, padding: 120 }, duration: 220 });
-  }, [search]);
+  }, [compact, search]);
 
   function exportPng() {
     const cy = cyRef.current;
@@ -124,11 +128,11 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
             <option value="all">展开全部</option>
           </select>
           <button className="icon-only" onClick={collapseAll} title="收起全部" aria-label="收起全部"><ChevronsUp /></button>
-          <button className="icon-only" onClick={() => focusRoot(cyRef.current, compact)} title="居中" aria-label="居中"><Focus /></button>
+          <button className="icon-only" onClick={() => fitMindMap(cyRef.current, compact)} title="适应画布" aria-label="适应画布"><Focus /></button>
           <details className="mindmap-more">
             <summary title="更多" aria-label="更多导图操作"><MoreHorizontal /></summary>
             <div>
-              <button onClick={() => cyRef.current?.fit(undefined, 54)}><Maximize2 />查看全图</button>
+              <button onClick={() => focusRoot(cyRef.current, compact)}><LocateFixed />定位中心节点</button>
               <button onClick={exportPng}><Download />导出 PNG</button>
               <button onClick={exportSvg}><Download />导出 SVG</button>
             </div>
@@ -136,9 +140,18 @@ export function NoteMindMap({ title, markdown, compact = false }: { title: strin
         </div>
       </div>
       <div ref={containerRef} className="mindmap-canvas" aria-label="笔记思维导图" />
-      <p><b>点击节点</b> 展开或收起 <i /> 滚轮缩放 <i /> 拖动画布</p>
     </section>
   );
+}
+
+function fitMindMap(cy: Core | null, compact: boolean) {
+  if (!cy || cy.destroyed() || !cy.elements().length) return;
+  cy.stop();
+  cy.resize();
+  const container = cy.container();
+  const shortestSide = Math.min(container?.clientWidth || 0, container?.clientHeight || 0);
+  const padding = compact ? 34 : Math.max(48, Math.min(88, shortestSide * .08));
+  cy.fit(cy.elements(), padding);
 }
 
 function focusRoot(cy: Core | null, compact: boolean) {

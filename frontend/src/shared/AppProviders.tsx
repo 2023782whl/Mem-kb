@@ -1,23 +1,27 @@
 import { App as AntApp, ConfigProvider } from "antd";
+import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import type { ReactNode } from "react";
 import { MotionConfig } from "motion/react";
+import { useI18n } from "../i18n";
+import { GlobalTooltip } from "./GlobalTooltip";
 
 export function AppProviders({ children }: { children: ReactNode }) {
+  const { locale } = useI18n();
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: .2, ease: "easeOut" }}><ConfigProvider
-      locale={zhCN}
+      locale={locale === "en-US" ? enUS : zhCN}
       theme={{
         token: {
-          colorPrimary: "#b75a0c",
-          colorInfo: "#4d7cfe",
-          colorSuccess: "#18b981",
-          colorWarning: "#d98a2b",
-          colorError: "#eb5757",
-          colorText: "#1f2329",
-          colorTextSecondary: "#646a73",
-          colorBorder: "#dee0e3",
-          colorBgLayout: "#f5f6f7",
+          colorPrimary: "#4c6ef5",
+          colorInfo: "#4c6ef5",
+          colorSuccess: "#16a34a",
+          colorWarning: "#d97706",
+          colorError: "#dc2626",
+          colorText: "#111827",
+          colorTextSecondary: "#667085",
+          colorBorder: "#e5e7eb",
+          colorBgLayout: "#f7f8fa",
           colorBgContainer: "#ffffff",
           borderRadius: 8,
           borderRadiusLG: 12,
@@ -30,7 +34,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         }
       }}
     >
-      <AntApp>{children}</AntApp>
+      <AntApp>{children}<GlobalTooltip /></AntApp>
     </ConfigProvider></MotionConfig>
   );
 }

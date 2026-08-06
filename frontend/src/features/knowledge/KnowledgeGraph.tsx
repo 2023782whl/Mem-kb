@@ -3,19 +3,20 @@ import { FolderTree, Image, Maximize2, Minus, Network, Package, Plus, Search, Ta
 import type { GraphEdge, GraphNode } from "../../types/domain";
 import { EmptyState } from "../../shared/EmptyState";
 import { FileTypeIcon } from "./FileTypeIcon";
+import { getDateLocale, useI18n, type AppLocale } from "../../i18n";
 
 interface Point { x: number; y: number }
 interface GraphLayout { points: Map<string, Point>; width: number; height: number }
 
 const ringCapacities = [8, 14, 22, 30, 38];
 
-export function layoutGraphNodes(nodes: GraphNode[]): GraphLayout {
+export function layoutGraphNodes(nodes: GraphNode[], locale: AppLocale = getDateLocale()): GraphLayout {
   const points = new Map<string, Point>();
   const center = nodes.find((node) => node.type === "workspace") || nodes[0];
   if (!center) return { points, width: 720, height: 520 };
   const children = nodes
     .filter((node) => node.id !== center.id)
-    .sort((left, right) => `${left.type}:${left.label}`.localeCompare(`${right.type}:${right.label}`, "zh-CN"));
+    .sort((left, right) => `${left.type}:${left.label}`.localeCompare(`${right.type}:${right.label}`, locale));
   let remaining = children.length;
   let ringCount = 0;
   while (remaining > 0) {
@@ -66,6 +67,7 @@ export function KnowledgeGraph({ nodes, edges, selectedAssetId, onSelect }: {
   selectedAssetId?: string;
   onSelect: (node: GraphNode) => void;
 }) {
+  const { locale } = useI18n();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [depth, setDepth] = useState(3);
@@ -82,7 +84,7 @@ export function KnowledgeGraph({ nodes, edges, selectedAssetId, onSelect }: {
     return [...(center ? [center] : []), ...matches].slice(0, 80);
   }, [depth, edges, nodes, search, type]);
 
-  const graphLayout = useMemo(() => layoutGraphNodes(visibleNodes), [visibleNodes]);
+  const graphLayout = useMemo(() => layoutGraphNodes(visibleNodes, locale), [locale, visibleNodes]);
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
 
   function fitGraph() {

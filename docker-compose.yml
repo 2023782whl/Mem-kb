@@ -57,6 +57,8 @@ services:
       FRONTEND_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
       PUBLIC_BASE_URL: ${APP_ORIGIN}
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      MODEL_SECRET: ${MODEL_SECRET:?set MODEL_SECRET}
+      CHANNEL_SECRET: ${CHANNEL_SECRET:?set CHANNEL_SECRET}
       DATABASE_URL: postgresql://aiteam:${POSTGRES_PASSWORD}@postgres:5432/aiteam_app
       DATABASE_NAME: aiteam_app
       DATABASE_HOST: postgres
@@ -80,6 +82,19 @@ services:
       DASHSCOPE_API_BASE_URL: ${DASHSCOPE_API_BASE_URL:-https://dashscope.aliyuncs.com/api/v1}
       DASHSCOPE_RERANK_BASE_URL: ${DASHSCOPE_RERANK_BASE_URL:-https://dashscope.aliyuncs.com/compatible-api/v1}
       LOG_DIR: /app/logs
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-12}
+      QA_CONCURRENCY: ${QA_CONCURRENCY:-12}
+      QA_QUEUE_LIMIT: ${QA_QUEUE_LIMIT:-24}
+      QA_REQUESTS_PER_MINUTE: ${QA_REQUESTS_PER_MINUTE:-30}
+      PROVIDER_CONCURRENCY: ${PROVIDER_CONCURRENCY:-8}
+      PROVIDER_QUEUE_LIMIT: ${PROVIDER_QUEUE_LIMIT:-24}
+      RETRIEVAL_MAX_WORKSPACES: ${RETRIEVAL_MAX_WORKSPACES:-8}
+      ASSET_WORKER_CONCURRENCY: ${ASSET_WORKER_CONCURRENCY:-2}
+      CHANNEL_BINDING_LEASE_SECONDS: ${CHANNEL_BINDING_LEASE_SECONDS:-120}
+      CHANNEL_PROCESSING_LEASE_SECONDS: ${CHANNEL_PROCESSING_LEASE_SECONDS:-180}
+      CHANNEL_SYNC_INTERVAL_MS: ${CHANNEL_SYNC_INTERVAL_MS:-15000}
+      CHANNEL_PROCESSING_CONCURRENCY: ${CHANNEL_PROCESSING_CONCURRENCY:-4}
+      CHANNEL_PROCESSING_QUEUE_LIMIT: ${CHANNEL_PROCESSING_QUEUE_LIMIT:-20}
     volumes:
       - app-storage:/app/storage
       - app-logs:/app/logs
@@ -91,10 +106,11 @@ services:
       gbrain:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 20
+    stop_grace_period: 30s
 
   worker:
     build:
@@ -106,8 +122,13 @@ services:
       - app-storage:/app/storage
       - app-logs:/app/logs
     depends_on:
-      api:
+      postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      gbrain:
+        condition: service_healthy
+    stop_grace_period: 30s
 
   web:
     build:
