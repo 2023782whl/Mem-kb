@@ -25,6 +25,7 @@
             --accent-soft: #ffe0b6;
             --accent-bg: #fff0d5;
             --success: #18b981;
+            --blue: #4d7cfe;
             --radius: 9px;
             --shadow: 0 14px 36px rgba(31, 35, 41, 0.08);
         }
@@ -170,6 +171,52 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
+        /* Highlights */
+        .highlights {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 28px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .highlight-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+        }
+
+        .highlight-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: var(--accent-bg);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .highlight-icon svg {
+            width: 48px;
+            height: 48px;
+        }
+
+        .highlight-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .highlight-card p {
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
         /* Section */
         section {
             max-width: 1200px;
@@ -203,6 +250,23 @@
         .feature:hover {
             transform: translateY(-4px);
             box-shadow: var(--shadow);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 20px;
+            background: var(--green-soft);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--green);
         }
 
         .feature h3 {
@@ -281,6 +345,10 @@
                 font-size: 32px;
             }
 
+            .highlights {
+                grid-template-columns: 1fr;
+            }
+
             .features {
                 grid-template-columns: 1fr;
             }
@@ -343,32 +411,118 @@
         </div>
     </section>
 
+    <!-- Highlights -->
+    <div class="highlights">
+        <div class="highlight-card">
+            <div class="highlight-icon">
+                <!-- Multi-document icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <path d="M14 2v6h6"/>
+                    <path d="M16 13H8"/>
+                    <path d="M16 17H8"/>
+                    <path d="M10 9H8"/>
+                </svg>
+            </div>
+            <h3>多格式文档解析</h3>
+            <p>支持 PDF、Word、Excel、Markdown 等多种格式，自动提取结构化内容和元数据</p>
+        </div>
+        <div class="highlight-card">
+            <div class="highlight-icon">
+                <!-- Brain/network icon for knowledge -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <circle cx="6" cy="6" r="2"/>
+                    <circle cx="18" cy="6" r="2"/>
+                    <circle cx="6" cy="18" r="2"/>
+                    <circle cx="18" cy="18" r="2"/>
+                    <path d="M9.5 8.5l3 3M14.5 8.5l-3 3M9.5 15.5l3-3M14.5 15.5l-3-3"/>
+                </svg>
+            </div>
+            <h3>企业知识图谱</h3>
+            <p>自动构建实体关系网络，发现隐藏联系，让知识可视化、可追溯</p>
+        </div>
+        <div class="highlight-card">
+            <div class="highlight-icon">
+                <!-- Evolution/cycle icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6"/>
+                    <path d="M2.5 22v-6h6"/>
+                    <path d="M21.5 8A10 10 0 0 0 5 4.1"/>
+                    <path d="M2.5 16A10 10 0 0 0 19 19.9"/>
+                    <circle cx="12" cy="12" r="2"/>
+                </svg>
+            </div>
+            <h3>知识自进化</h3>
+            <p>夜间自动检查、修复失效引用，巩固知识关系，持续优化知识库质量</p>
+        </div>
+    </div>
+
     <section id="features">
-        <h2>主要功能</h2>
+        <h2>核心能力</h2>
         <div class="features">
             <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </div>
                 <h3>混合检索</h3>
                 <p>向量检索 + 全文检索 + Rerank 精排，提高召回率和准确率</p>
             </div>
             <div class="feature">
-                <h3>知识自进化</h3>
-                <p>夜间自动巩固，修复失效引用，重建关系图谱</p>
-            </div>
-            <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </div>
                 <h3>RAG 评测</h3>
                 <p>Recall、MRR、NDCG 等多维度评测指标</p>
             </div>
             <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M9 3v18"/>
+                        <path d="M15 3v18"/>
+                        <path d="M3 9h18"/>
+                        <path d="M3 15h18"/>
+                    </svg>
+                </div>
                 <h3>知识图谱</h3>
                 <p>自动提取实体和关系，可视化知识结构</p>
             </div>
             <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
                 <h3>多租户隔离</h3>
                 <p>企业级权限控制，RLS 策略保护数据安全</p>
             </div>
             <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                </div>
                 <h3>性能优化</h3>
                 <p>慢查询监控、N+1 优化，50-100x 性能提升</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20"/>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                </div>
+                <h3>iLink 渠道</h3>
+                <p>飞书、企业微信、钉钉等多渠道集成</p>
             </div>
         </div>
     </section>
