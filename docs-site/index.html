@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MEM-KB - 让企业知识为你所用，智能问答、自动整理、持续进化">
-    <title>MEM-KB - 企业知识工作台</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="description" content="MEM-KB - 企业知识管理系统">
+    <title>MEM-KB - 企业知识管理系统</title>
     <style>
         * {
             margin: 0;
@@ -16,41 +13,38 @@
         }
 
         :root {
-            --primary: #F59E0B;
-            --primary-dark: #D97706;
-            --primary-light: #FCD34D;
-            --accent: #F97316;
-            --dark: #1F2937;
-            --gray: #6B7280;
-            --light: #F9FAFB;
+            --orange: #F59E0B;
+            --orange-dark: #D97706;
+            --orange-light: #FCD34D;
+            --text: #1F2937;
+            --text-light: #6B7280;
+            --bg: #FFFFFF;
+            --bg-gray: #F9FAFB;
             --border: #E5E7EB;
-            --white: #FFFFFF;
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1.6;
-            color: var(--dark);
-            background: var(--white);
-            overflow-x: hidden;
+            color: var(--text);
+            background: var(--bg);
         }
 
         /* Header */
         header {
             position: fixed;
             top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
-            z-index: 1000;
+            z-index: 100;
         }
 
         nav {
-            max-width: 1280px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 16px 32px;
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -59,650 +53,264 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
-            color: var(--dark);
+            color: var(--text);
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 50%, #F97316 100%);
-            border-radius: 12px;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #FCD34D, #F59E0B);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            font-weight: 900;
+            font-weight: 700;
             color: white;
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
 
         .logo-text {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.02em;
+            font-size: 20px;
+            font-weight: 700;
         }
 
-        .nav-links {
-            display: flex;
-            gap: 32px;
-            list-style: none;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--gray);
+        nav a {
+            color: var(--text-light);
             text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
+            margin-left: 24px;
         }
 
-        .nav-links a:hover {
-            color: var(--primary);
+        nav a:hover {
+            color: var(--orange);
         }
 
         .btn {
-            padding: 10px 20px;
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: var(--primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--orange);
             color: white;
+            font-weight: 500;
         }
 
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+        .btn:hover {
+            background: var(--orange-dark);
         }
 
         /* Hero */
         .hero {
-            padding: 160px 32px 120px;
-            background: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 50%, #FFFFFF 100%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -30%;
-            left: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .hero-content {
-            max-width: 1280px;
-            margin: 0 auto;
+            padding: 140px 24px 80px;
+            background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%);
             text-align: center;
-            position: relative;
-            z-index: 1;
         }
 
         .hero h1 {
-            font-size: 72px;
-            font-weight: 900;
-            line-height: 1.1;
-            margin-bottom: 24px;
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, var(--dark) 0%, var(--primary-dark) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text);
         }
 
-        .hero-subtitle {
-            font-size: 24px;
-            color: var(--gray);
-            margin-bottom: 48px;
-            font-weight: 500;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
+        .hero p {
+            font-size: 20px;
+            color: var(--text-light);
+            margin-bottom: 32px;
         }
 
         .hero-buttons {
             display: flex;
-            gap: 16px;
+            gap: 12px;
             justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 64px;
+            margin-bottom: 40px;
         }
 
         .btn-large {
-            padding: 16px 32px;
-            font-size: 18px;
-            border-radius: 12px;
+            padding: 12px 24px;
+            font-size: 16px;
         }
 
         .btn-outline {
             background: white;
-            color: var(--primary);
-            border: 2px solid var(--primary);
+            color: var(--orange);
+            border: 2px solid var(--orange);
         }
 
         .btn-outline:hover {
-            background: var(--primary);
+            background: var(--orange);
             color: white;
         }
 
-        .hero-badges {
+        .badges {
             display: flex;
-            gap: 24px;
+            gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
         .badge {
             background: white;
-            padding: 12px 24px;
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--gray);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-light);
+            border: 1px solid var(--border);
         }
 
-        /* Feature Intro */
-        .feature-intro {
-            padding: 120px 32px;
-            background: white;
-            position: relative;
-        }
-
-        .feature-intro-content {
-            max-width: 1280px;
+        /* Section */
+        section {
+            max-width: 1200px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 80px;
-            align-items: center;
+            padding: 80px 24px;
         }
 
-        .feature-intro-text h2 {
-            font-size: 48px;
-            font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 24px;
-            letter-spacing: -0.02em;
-        }
-
-        .feature-intro-text p {
-            font-size: 20px;
-            color: var(--gray);
-            line-height: 1.7;
-            margin-bottom: 16px;
-        }
-
-        .feature-intro-visual {
-            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-            border-radius: 24px;
-            padding: 48px;
-            box-shadow: 0 20px 60px rgba(245, 158, 11, 0.2);
-            position: relative;
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .mockup-card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-        }
-
-        .mockup-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .mockup-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--primary-light), var(--primary));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-
-        .mockup-title {
-            font-size: 18px;
+        h2 {
+            font-size: 36px;
             font-weight: 700;
-            color: var(--dark);
+            margin-bottom: 40px;
+            text-align: center;
         }
 
-        .mockup-content {
-            color: var(--gray);
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .feature h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            color: var(--text-light);
             font-size: 14px;
             line-height: 1.6;
         }
 
-        /* Features Grid */
-        .features-section {
-            padding: 120px 32px;
-            background: var(--light);
-        }
-
-        .section-header {
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto 80px;
-        }
-
-        .section-header h2 {
-            font-size: 48px;
-            font-weight: 800;
-            margin-bottom: 20px;
-            letter-spacing: -0.02em;
-        }
-
-        .section-header p {
-            font-size: 20px;
-            color: var(--gray);
-        }
-
-        .features-grid {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-        }
-
-        .feature-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-        }
-
-        .feature-icon {
-            font-size: 48px;
-            margin-bottom: 24px;
-            display: block;
-        }
-
-        .feature-card h3 {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: var(--dark);
-        }
-
-        .feature-card p {
-            color: var(--gray);
-            line-height: 1.7;
-        }
-
         /* Tech Stack */
-        .tech-section {
-            padding: 120px 32px;
-            background: white;
-        }
-
         .tech-grid {
-            max-width: 1000px;
-            margin: 60px auto 0;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
+            gap: 16px;
+            margin-top: 40px;
         }
 
         .tech-card {
-            background: var(--light);
-            border-radius: 16px;
-            padding: 32px 24px;
+            background: var(--bg-gray);
+            border-radius: 10px;
+            padding: 24px;
             text-align: center;
-            transition: all 0.2s;
-        }
-
-        .tech-card:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-4px);
         }
 
         .tech-card h4 {
             font-size: 16px;
-            font-weight: 700;
             margin-bottom: 8px;
         }
 
         .tech-card p {
-            font-size: 14px;
-            opacity: 0.8;
-        }
-
-        /* Stats */
-        .stats-section {
-            padding: 100px 32px;
-            background: var(--dark);
-            color: white;
-        }
-
-        .stats-grid {
-            max-width: 1000px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 48px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 56px;
-            font-weight: 900;
-            color: var(--primary-light);
-            margin-bottom: 12px;
-            letter-spacing: -0.02em;
-        }
-
-        .stat-label {
-            font-size: 16px;
-            opacity: 0.8;
-            font-weight: 500;
-        }
-
-        /* CTA */
-        .cta-section {
-            padding: 120px 32px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            color: white;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -20%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .cta-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .cta-section h2 {
-            font-size: 48px;
-            font-weight: 800;
-            margin-bottom: 24px;
-            letter-spacing: -0.02em;
-        }
-
-        .cta-section p {
-            font-size: 20px;
-            margin-bottom: 40px;
-            opacity: 0.95;
+            font-size: 13px;
+            color: var(--text-light);
         }
 
         /* Footer */
         footer {
-            background: var(--dark);
-            color: white;
-            padding: 80px 32px 40px;
-        }
-
-        .footer-content {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 60px;
-            margin-bottom: 60px;
-        }
-
-        .footer-brand {
-            max-width: 320px;
-        }
-
-        .footer-brand .logo {
-            margin-bottom: 16px;
-        }
-
-        .footer-brand p {
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.7;
-        }
-
-        .footer-links h4 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
-
-        .footer-links ul {
-            list-style: none;
-        }
-
-        .footer-links li {
-            margin-bottom: 12px;
-        }
-
-        .footer-links a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: white;
-        }
-
-        .footer-bottom {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding-top: 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-gray);
+            padding: 40px 24px;
             text-align: center;
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-light);
+            font-size: 14px;
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .feature-intro-content {
-                grid-template-columns: 1fr;
-            }
-
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .tech-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .footer-content {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
         @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
             .hero h1 {
-                font-size: 48px;
-            }
-
-            .hero-subtitle {
-                font-size: 18px;
-            }
-
-            .feature-intro-text h2,
-            .section-header h2,
-            .cta-section h2 {
                 font-size: 36px;
             }
 
-            .features-grid {
+            .features {
                 grid-template-columns: 1fr;
             }
 
             .tech-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-content {
-                grid-template-columns: 1fr;
+            nav a:not(.btn) {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header>
         <nav>
             <a href="#" class="logo">
                 <div class="logo-icon">M</div>
                 <span class="logo-text">MEM-KB</span>
             </a>
-            <ul class="nav-links">
-                <li><a href="#features">功能</a></li>
-                <li><a href="#tech">技术</a></li>
-                <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/docs/README.md">文档</a></li>
-                <li><a href="https://github.com/2023782whl/Mem-kb" class="btn btn-primary">GitHub</a></li>
-            </ul>
+            <div>
+                <a href="#features">功能</a>
+                <a href="#tech">技术</a>
+                <a href="https://github.com/2023782whl/Mem-kb" class="btn">GitHub</a>
+            </div>
         </nav>
     </header>
 
-    <!-- Hero -->
     <section class="hero">
-        <div class="hero-content">
-            <h1>让企业知识<br>为你所用</h1>
-            <p class="hero-subtitle">智能问答、自动整理、持续进化<br>从此告别知识孤岛</p>
-            <div class="hero-buttons">
-                <a href="https://github.com/2023782whl/Mem-kb" class="btn btn-primary btn-large">立即开始</a>
-                <a href="https://github.com/2023782whl/Mem-kb/blob/main/README.md" class="btn btn-outline btn-large">查看文档</a>
-            </div>
-            <div class="hero-badges">
-                <span class="badge">✅ MIT License</span>
-                <span class="badge">🔒 0 安全漏洞</span>
-                <span class="badge">✨ 93 测试通过</span>
-                <span class="badge">🚀 生产就绪</span>
-            </div>
+        <h1>企业知识管理系统</h1>
+        <p>基于 RAG 的知识问答 + 自动知识图谱 + 夜间自进化</p>
+        <div class="hero-buttons">
+            <a href="https://github.com/2023782whl/Mem-kb" class="btn btn-large">GitHub</a>
+            <a href="https://github.com/2023782whl/Mem-kb/blob/main/README.md" class="btn btn-outline btn-large">文档</a>
+        </div>
+        <div class="badges">
+            <span class="badge">MIT License</span>
+            <span class="badge">0 漏洞</span>
+            <span class="badge">93 测试通过</span>
         </div>
     </section>
 
-    <!-- Feature Intro -->
-    <section class="feature-intro">
-        <div class="feature-intro-content">
-            <div class="feature-intro-text">
-                <h2>从知识中<br>获得答案</h2>
-                <p>检索企业知识，回归关键资料，并根据可信内容生成答案。</p>
-                <p>理解上下文、自动标注引用、支持多轮对话。</p>
-            </div>
-            <div class="feature-intro-visual">
-                <div class="mockup-card">
-                    <div class="mockup-header">
-                        <div class="mockup-icon">💡</div>
-                        <div class="mockup-title">智能问答</div>
-                    </div>
-                    <div class="mockup-content">
-                        <p><strong>问：</strong> 如何部署这套 SOP？</p>
-                        <p style="margin-top: 12px;"><strong>答：</strong> 根据《运营流程 SOP.md》，部署需要三个步骤...</p>
-                        <p style="margin-top: 12px; font-size: 12px; color: #9CA3AF;">📄 引用: 运营流程 SOP.md</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section id="features" class="features-section">
-        <div class="section-header">
-            <h2>为企业知识管理<br>而设计</h2>
-            <p>从检索到整理，从评测到进化，全链路覆盖</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <span class="feature-icon">🔍</span>
+    <section id="features">
+        <h2>主要功能</h2>
+        <div class="features">
+            <div class="feature">
                 <h3>混合检索</h3>
-                <p>向量检索 + 全文检索 + Rerank 精排，确保召回率和准确率</p>
+                <p>向量检索 + 全文检索 + Rerank 精排，提高召回率和准确率</p>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">🧠</span>
+            <div class="feature">
                 <h3>知识自进化</h3>
                 <p>夜间自动巩固，修复失效引用，重建关系图谱</p>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">📊</span>
+            <div class="feature">
                 <h3>RAG 评测</h3>
-                <p>支持 Recall、MRR、NDCG 等多维度评测指标</p>
+                <p>Recall、MRR、NDCG 等多维度评测指标</p>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">🗺️</span>
+            <div class="feature">
                 <h3>知识图谱</h3>
                 <p>自动提取实体和关系，可视化知识结构</p>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">👥</span>
+            <div class="feature">
                 <h3>多租户隔离</h3>
                 <p>企业级权限控制，RLS 策略保护数据安全</p>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">⚡</span>
+            <div class="feature">
                 <h3>性能优化</h3>
-                <p>慢查询监控、N+1 优化、50-100x 性能提升</p>
+                <p>慢查询监控、N+1 优化，50-100x 性能提升</p>
             </div>
         </div>
     </section>
 
-    <!-- Tech Stack -->
-    <section id="tech" class="tech-section">
-        <div class="section-header">
-            <h2>现代化技术栈</h2>
-            <p>性能、安全、可扩展</p>
-        </div>
+    <section id="tech">
+        <h2>技术栈</h2>
         <div class="tech-grid">
             <div class="tech-card">
                 <h4>Backend</h4>
@@ -723,78 +331,8 @@
         </div>
     </section>
 
-    <!-- Stats -->
-    <section class="stats-section">
-        <div class="stats-grid">
-            <div>
-                <div class="stat-number">347K+</div>
-                <div class="stat-label">代码行数</div>
-            </div>
-            <div>
-                <div class="stat-number">93/93</div>
-                <div class="stat-label">测试通过</div>
-            </div>
-            <div>
-                <div class="stat-number">0</div>
-                <div class="stat-label">安全漏洞</div>
-            </div>
-            <div>
-                <div class="stat-number">50x</div>
-                <div class="stat-label">性能提升</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta-section">
-        <div class="cta-content">
-            <h2>准备好开始了吗？</h2>
-            <p>5 分钟快速部署，体验智能知识管理</p>
-            <div class="hero-buttons">
-                <a href="https://github.com/2023782whl/Mem-kb" class="btn btn-primary btn-large" style="background: white; color: var(--primary);">查看 GitHub</a>
-                <a href="https://github.com/2023782whl/Mem-kb/blob/main/docs/10-deployment-and-operations.md" class="btn btn-outline btn-large" style="border-color: white; color: white;">部署指南</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
     <footer>
-        <div class="footer-content">
-            <div class="footer-brand">
-                <a href="#" class="logo">
-                    <div class="logo-icon">M</div>
-                    <span class="logo-text">MEM-KB</span>
-                </a>
-                <p>自托管企业知识管理系统，让每一份知识都能被你记住。</p>
-            </div>
-            <div class="footer-links">
-                <h4>产品</h4>
-                <ul>
-                    <li><a href="#features">功能特性</a></li>
-                    <li><a href="#tech">技术栈</a></li>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/CHANGELOG.md">更新日志</a></li>
-                </ul>
-            </div>
-            <div class="footer-links">
-                <h4>资源</h4>
-                <ul>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/README.md">快速开始</a></li>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/docs/03-architecture.md">架构文档</a></li>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/TROUBLESHOOTING.md">故障排查</a></li>
-                </ul>
-            </div>
-            <div class="footer-links">
-                <h4>社区</h4>
-                <ul>
-                    <li><a href="https://github.com/2023782whl/Mem-kb">GitHub</a></li>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/issues">Issues</a></li>
-                    <li><a href="https://github.com/2023782whl/Mem-kb/blob/main/CONTRIBUTING.md">贡献指南</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>© 2026 MEM-KB. Released under the MIT License.</p>
-        </div>
+        <p>© 2026 MEM-KB · MIT License · <a href="https://github.com/2023782whl/Mem-kb" style="color: var(--orange);">GitHub</a></p>
     </footer>
 </body>
 </html>
