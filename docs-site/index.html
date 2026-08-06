@@ -5,552 +5,301 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MEM-KB - 企业知识管理系统">
     <title>MEM-KB - 企业知识管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --bg: #f7f7f8;
-            --surface: #ffffff;
-            --line: #e1e3e6;
-            --text: #202124;
-            --muted: #666b73;
-            --green: #25282d;
-            --green-dark: #17191d;
-            --green-soft: #eef0f2;
-            --accent: #edc58c;
-            --accent-soft: #ffe0b6;
-            --accent-bg: #fff0d5;
-            --success: #18b981;
-            --blue: #4d7cfe;
-            --radius: 9px;
-            --shadow: 0 14px 36px rgba(31, 35, 41, 0.08);
-        }
-
         body {
-            font-family: Inter, "SF Pro Text", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
-            line-height: 1.6;
-            color: var(--text);
-            background: var(--bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-
-        /* Header */
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.96);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--line);
-            z-index: 100;
+        .gradient-text {
+            background: linear-gradient(135deg, #F7B51D 0%, #F28734 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        nav {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 16px 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            text-decoration: none;
-            color: var(--text);
-        }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            flex: 0 0 40px;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(226, 185, 105, .34);
-            border-radius: 12px;
-            background: #fffdf8;
-            box-shadow: 0 7px 18px rgba(181, 132, 43, .12);
-        }
-
-        .brand-icon svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .brand-text {
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        nav a {
-            color: var(--muted);
-            text-decoration: none;
-            margin-left: 24px;
-            font-weight: 500;
-        }
-
-        nav a:hover {
-            color: var(--text);
-        }
-
-        .button {
-            min-height: 42px;
-            padding: 0 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            background: var(--surface);
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .button.primary {
-            color: #fff;
-            background: var(--green);
-            border-color: var(--green);
-            box-shadow: 0 6px 16px rgba(32, 33, 36, .14);
-        }
-
-        .button.primary:hover {
-            background: var(--green-dark);
-            border-color: var(--green-dark);
-        }
-
-        /* Hero */
-        .hero {
-            padding: 140px 28px 100px;
-            background: linear-gradient(180deg, var(--accent-bg) 0%, var(--surface) 100%);
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: 56px;
-            font-weight: 900;
-            margin-bottom: 20px;
-            color: var(--text);
-            letter-spacing: -0.02em;
-        }
-
-        .hero p {
-            font-size: 20px;
-            color: var(--muted);
-            margin-bottom: 36px;
-            line-height: 1.7;
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-bottom: 48px;
-        }
-
-        .badges {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            background: var(--surface);
-            padding: 12px 24px;
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--muted);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-
-        /* Highlights */
-        .highlights {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 80px 28px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-        }
-
         .highlight-card {
-            background: var(--surface);
-            border: 1px solid var(--line);
+            background: linear-gradient(135deg, rgba(255, 243, 223, 0.5) 0%, rgba(255, 255, 255, 1) 100%);
+        }
+        .feature-icon-wrapper {
+            position: relative;
+        }
+        .feature-icon-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            background: linear-gradient(135deg, #FFE36A, #F7B51D, #F28734);
             border-radius: 16px;
-            padding: 40px 32px;
-            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
         }
-
-        .highlight-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 24px;
-            background: var(--accent-bg);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .feature-card:hover .feature-icon-wrapper::before {
+            opacity: 0.2;
         }
-
-        .highlight-icon svg {
-            width: 48px;
-            height: 48px;
+        .glow {
+            box-shadow: 0 0 30px rgba(247, 181, 29, 0.3);
         }
-
-        .highlight-card h3 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 12px;
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
-
-        .highlight-card p {
-            color: var(--muted);
-            line-height: 1.7;
-            font-size: 15px;
-        }
-
-        /* Section */
-        section {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 100px 28px;
-        }
-
-        h2 {
-            font-size: 42px;
-            font-weight: 800;
-            margin-bottom: 48px;
-            text-align: center;
-            letter-spacing: -0.02em;
-        }
-
-        /* Features */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
-        .feature {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 32px;
-            transition: all 0.2s;
-        }
-
-        .feature:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow);
-        }
-
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 20px;
-            background: var(--green-soft);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .feature-icon svg {
-            width: 24px;
-            height: 24px;
-            color: var(--green);
-        }
-
-        .feature h3 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-
-        .feature p {
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        /* Tech Stack */
-        .tech-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-top: 48px;
-        }
-
-        .tech-card {
-            background: var(--green-soft);
-            border-radius: 10px;
-            padding: 32px 20px;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .tech-card:hover {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            transform: translateY(-2px);
-        }
-
-        .tech-card h4 {
-            font-size: 16px;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-
-        .tech-card p {
-            font-size: 13px;
-            color: var(--muted);
-            line-height: 1.6;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--surface);
-            padding: 48px 28px;
-            text-align: center;
-            color: var(--muted);
-            font-size: 14px;
-            border-top: 1px solid var(--line);
-        }
-
-        footer a {
-            color: var(--text);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        footer a:hover {
-            color: var(--success);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 36px;
-            }
-
-            h2 {
-                font-size: 32px;
-            }
-
-            .highlights {
-                grid-template-columns: 1fr;
-            }
-
-            .features {
-                grid-template-columns: 1fr;
-            }
-
-            .tech-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            nav a:not(.button) {
-                display: none;
-            }
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
         }
     </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand': {
+                            50: '#FFF9DF',
+                            100: '#FFF3C7',
+                            200: '#FFE36A',
+                            300: '#F7B51D',
+                            400: '#F28734',
+                            500: '#E69C14',
+                            600: '#C97813',
+                        },
+                        'dark': {
+                            50: '#eef0f2',
+                            100: '#c9cdd2',
+                            500: '#25282d',
+                            600: '#17191d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <header>
-        <nav>
-            <a href="#" class="brand">
-                <div class="brand-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-                        <defs>
-                            <linearGradient id="g" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#FFE36A"/>
-                                <stop offset=".48" stop-color="#F7B51D"/>
-                                <stop offset="1" stop-color="#F28734"/>
-                            </linearGradient>
-                            <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
-                                <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#C97813" flood-opacity=".28"/>
-                            </filter>
-                        </defs>
-                        <rect x="5" y="5" width="54" height="54" rx="17" fill="#FFF9DF" stroke="#F3C75D" stroke-width="2"/>
-                        <rect x="10" y="10" width="44" height="44" rx="14" fill="url(#g)" filter="url(#s)"/>
-                        <path d="M23 20h14l7 7v17H23z" fill="#fff" fill-opacity=".94"/>
-                        <path d="M37 20v8h7" fill="none" stroke="#E69C14" stroke-width="2.4" stroke-linejoin="round"/>
-                        <path d="M28 34h11M28 39h8" stroke="#E69C14" stroke-width="2.4" stroke-linecap="round"/>
-                        <path d="m18 19 1.5 3.5L23 24l-3.5 1.5L18 29l-1.5-3.5L13 24l3.5-1.5z" fill="#fff"/>
-                    </svg>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-lg border-b border-gray-200 z-50">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-200 via-brand-300 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-300/30 group-hover:shadow-brand-300/50 transition-all duration-300">
+                    <span class="material-icons text-white text-2xl">auto_stories</span>
                 </div>
-                <span class="brand-text">MEM-KB</span>
+                <span class="text-2xl font-black text-gray-900">MEM-KB</span>
             </a>
-            <div>
-                <a href="#features">功能</a>
-                <a href="#tech">技术</a>
-                <a href="https://github.com/2023782whl/Mem-kb" class="button primary">GitHub</a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#features" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">功能</a>
+                <a href="#tech" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">技术</a>
+                <a href="https://github.com/2023782whl/Mem-kb" class="px-6 py-2.5 bg-dark-500 text-white rounded-lg font-bold hover:bg-dark-600 transition-all duration-300 shadow-lg hover:shadow-xl">
+                    GitHub
+                </a>
             </div>
         </nav>
     </header>
 
-    <section class="hero">
-        <h1>企业知识管理系统</h1>
-        <p>基于 RAG 的知识问答 + 自动知识图谱 + 夜间自进化</p>
-        <div class="hero-buttons">
-            <a href="https://github.com/2023782whl/Mem-kb" class="button primary">GitHub</a>
-            <a href="https://github.com/2023782whl/Mem-kb/blob/main/README.md" class="button">文档</a>
-        </div>
-        <div class="badges">
-            <span class="badge">MIT License</span>
-            <span class="badge">0 漏洞</span>
-            <span class="badge">93 测试通过</span>
+    <!-- Hero -->
+    <section class="pt-32 pb-20 px-6 bg-gradient-to-b from-brand-50 to-white">
+        <div class="max-w-5xl mx-auto text-center">
+            <h1 class="text-6xl md:text-7xl font-black mb-6 leading-tight">
+                企业知识<span class="gradient-text">智能管理</span>
+            </h1>
+            <p class="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+                基于 RAG 的知识问答 · 自动知识图谱 · 夜间自进化
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-4 mb-12">
+                <a href="https://github.com/2023782whl/Mem-kb" class="px-8 py-4 bg-dark-500 text-white rounded-xl font-bold text-lg hover:bg-dark-600 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105">
+                    <span class="flex items-center gap-2">
+                        <span class="material-icons">code</span>
+                        GitHub
+                    </span>
+                </a>
+                <a href="https://github.com/2023782whl/Mem-kb/blob/main/README.md" class="px-8 py-4 bg-white text-gray-900 rounded-xl font-bold text-lg border-2 border-gray-200 hover:border-brand-300 transition-all duration-300 shadow-lg hover:shadow-xl">
+                    文档
+                </a>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                    <span class="flex items-center gap-2">
+                        <span class="material-icons text-base">verified</span>
+                        MIT License
+                    </span>
+                </span>
+                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                    <span class="flex items-center gap-2">
+                        <span class="material-icons text-base text-green-500">security</span>
+                        0 漏洞
+                    </span>
+                </span>
+                <span class="px-5 py-2 bg-white rounded-full text-sm font-semibold text-gray-600 shadow-md border border-gray-100">
+                    <span class="flex items-center gap-2">
+                        <span class="material-icons text-base text-blue-500">done_all</span>
+                        93 测试通过
+                    </span>
+                </span>
+            </div>
         </div>
     </section>
 
     <!-- Highlights -->
-    <div class="highlights">
-        <div class="highlight-card">
-            <div class="highlight-icon">
-                <!-- Multi-document icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <path d="M14 2v6h6"/>
-                    <path d="M16 13H8"/>
-                    <path d="M16 17H8"/>
-                    <path d="M10 9H8"/>
-                </svg>
+    <section class="py-20 px-6">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                    <span class="material-icons text-white text-5xl">description</span>
+                </div>
+                <h3 class="text-2xl font-bold mb-4 text-gray-900">多格式文档解析</h3>
+                <p class="text-gray-600 leading-relaxed">
+                    支持 PDF、Word、Excel、Markdown 等多种格式，自动提取结构化内容和元数据
+                </p>
             </div>
-            <h3>多格式文档解析</h3>
-            <p>支持 PDF、Word、Excel、Markdown 等多种格式，自动提取结构化内容和元数据</p>
-        </div>
-        <div class="highlight-card">
-            <div class="highlight-icon">
-                <!-- Brain/network icon for knowledge -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/>
-                    <circle cx="6" cy="6" r="2"/>
-                    <circle cx="18" cy="6" r="2"/>
-                    <circle cx="6" cy="18" r="2"/>
-                    <circle cx="18" cy="18" r="2"/>
-                    <path d="M9.5 8.5l3 3M14.5 8.5l-3 3M9.5 15.5l3-3M14.5 15.5l-3-3"/>
-                </svg>
-            </div>
-            <h3>企业知识图谱</h3>
-            <p>自动构建实体关系网络，发现隐藏联系，让知识可视化、可追溯</p>
-        </div>
-        <div class="highlight-card">
-            <div class="highlight-icon">
-                <!-- Evolution/cycle icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21.5 2v6h-6"/>
-                    <path d="M2.5 22v-6h6"/>
-                    <path d="M21.5 8A10 10 0 0 0 5 4.1"/>
-                    <path d="M2.5 16A10 10 0 0 0 19 19.9"/>
-                    <circle cx="12" cy="12" r="2"/>
-                </svg>
-            </div>
-            <h3>知识自进化</h3>
-            <p>夜间自动检查、修复失效引用，巩固知识关系，持续优化知识库质量</p>
-        </div>
-    </div>
 
-    <section id="features">
-        <h2>核心能力</h2>
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.35-4.35"/>
-                    </svg>
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                    <span class="material-icons text-white text-5xl">device_hub</span>
                 </div>
-                <h3>混合检索</h3>
-                <p>向量检索 + 全文检索 + Rerank 精排，提高召回率和准确率</p>
+                <h3 class="text-2xl font-bold mb-4 text-gray-900">企业知识图谱</h3>
+                <p class="text-gray-600 leading-relaxed">
+                    自动构建实体关系网络，发现隐藏联系，让知识可视化、可追溯
+                </p>
             </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
+
+            <div class="highlight-card rounded-3xl p-10 border border-brand-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
+                <div class="w-20 h-20 bg-gradient-to-br from-brand-300 to-brand-400 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                    <span class="material-icons text-white text-5xl">autorenew</span>
                 </div>
-                <h3>RAG 评测</h3>
-                <p>Recall、MRR、NDCG 等多维度评测指标</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <path d="M9 3v18"/>
-                        <path d="M15 3v18"/>
-                        <path d="M3 9h18"/>
-                        <path d="M3 15h18"/>
-                    </svg>
-                </div>
-                <h3>知识图谱</h3>
-                <p>自动提取实体和关系，可视化知识结构</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                </div>
-                <h3>多租户隔离</h3>
-                <p>企业级权限控制，RLS 策略保护数据安全</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                    </svg>
-                </div>
-                <h3>性能优化</h3>
-                <p>慢查询监控、N+1 优化，50-100x 性能提升</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20"/>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                    </svg>
-                </div>
-                <h3>iLink 渠道</h3>
-                <p>飞书、企业微信、钉钉等多渠道集成</p>
+                <h3 class="text-2xl font-bold mb-4 text-gray-900">知识自进化</h3>
+                <p class="text-gray-600 leading-relaxed">
+                    夜间自动检查、修复失效引用，巩固知识关系，持续优化知识库质量
+                </p>
             </div>
         </div>
     </section>
 
-    <section id="tech">
-        <h2>技术栈</h2>
-        <div class="tech-grid">
-            <div class="tech-card">
-                <h4>Backend</h4>
-                <p>Node.js 22<br>TypeScript<br>Fastify</p>
-            </div>
-            <div class="tech-card">
-                <h4>Database</h4>
-                <p>PostgreSQL 17<br>pgvector<br>RLS</p>
-            </div>
-            <div class="tech-card">
-                <h4>Frontend</h4>
-                <p>React 19<br>Vite<br>TanStack Query</p>
-            </div>
-            <div class="tech-card">
-                <h4>AI/ML</h4>
-                <p>文心一言<br>通义千问<br>GPT</p>
+    <!-- Features -->
+    <section id="features" class="py-20 px-6 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-5xl font-black text-center mb-4">
+                核心<span class="gradient-text">能力</span>
+            </h2>
+            <p class="text-center text-gray-600 mb-16 text-lg">从检索到评测，全链路覆盖</p>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-green-600 text-4xl">search</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">混合检索</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        向量检索 + 全文检索 + Rerank 精排，提高召回率和准确率
+                    </p>
+                </div>
+
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-orange-600 text-4xl">insights</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">RAG 评测</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        Recall、MRR、NDCG 等多维度评测指标
+                    </p>
+                </div>
+
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-purple-600 text-4xl">account_tree</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">知识图谱</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        自动提取实体和关系，可视化知识结构
+                    </p>
+                </div>
+
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-blue-600 text-4xl">group</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">多租户隔离</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        企业级权限控制，RLS 策略保护数据安全
+                    </p>
+                </div>
+
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-red-600 text-4xl">speed</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">性能优化</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        慢查询监控、N+1 优化，50-100x 性能提升
+                    </p>
+                </div>
+
+                <div class="feature-card bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-2xl hover:border-brand-200 transition-all duration-300 group">
+                    <div class="feature-icon-wrapper w-16 h-16 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <span class="material-icons text-teal-600 text-4xl">hub</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-gray-900">iLink 渠道</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        飞书、企业微信、钉钉等多渠道集成
+                    </p>
+                </div>
             </div>
         </div>
     </section>
 
-    <footer>
-        <p>© 2026 MEM-KB · MIT License · <a href="https://github.com/2023782whl/Mem-kb">GitHub</a></p>
+    <!-- Tech Stack -->
+    <section id="tech" class="py-20 px-6 bg-gradient-to-b from-gray-50 to-white">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-5xl font-black text-center mb-16">
+                技术<span class="gradient-text">栈</span>
+            </h2>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="material-icons text-white text-4xl">dns</span>
+                    </div>
+                    <h4 class="font-bold text-lg mb-3">Backend</h4>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        Node.js 22<br>TypeScript<br>Fastify
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="material-icons text-white text-4xl">storage</span>
+                    </div>
+                    <h4 class="font-bold text-lg mb-3">Database</h4>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        PostgreSQL 17<br>pgvector<br>RLS
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="material-icons text-white text-4xl">web</span>
+                    </div>
+                    <h4 class="font-bold text-lg mb-3">Frontend</h4>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        React 19<br>Vite<br>TanStack Query
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-200 hover:shadow-xl transition-all duration-300 text-center group">
+                    <div class="w-16 h-16 bg-gradient-to-br from-brand-300 to-brand-400 rounded-xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="material-icons text-white text-4xl">psychology</span>
+                    </div>
+                    <h4 class="font-bold text-lg mb-3">AI/ML</h4>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        文心一言<br>通义千问<br>GPT
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12 px-6">
+        <div class="max-w-7xl mx-auto text-center text-gray-600">
+            <p>© 2026 MEM-KB · MIT License · <a href="https://github.com/2023782whl/Mem-kb" class="text-gray-900 font-semibold hover:text-brand-400 transition-colors">GitHub</a></p>
+        </div>
     </footer>
 </body>
 </html>
